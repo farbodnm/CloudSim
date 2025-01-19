@@ -1,7 +1,6 @@
-package org.cloudbus.cloudsim.serverless;
+package org.cloudbus.cloudsim.serverlessbac;
 
 import org.cloudbus.cloudsim.UtilizationModel;
-import org.cloudbus.cloudsim.UtilizationModelFull;
 
 /**
  * New utilization model class for partial usage of a resource
