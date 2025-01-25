@@ -1,4 +1,4 @@
-package org.cloudbus.cloudsim.serverless.components;
+package org.cloudbus.cloudsim.serverless.components.scheduling;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -9,7 +9,10 @@ import org.cloudbus.cloudsim.container.lists.ContainerList;
 import org.cloudbus.cloudsim.container.lists.ContainerVmList;
 import org.cloudbus.cloudsim.core.CloudSim;
 import org.cloudbus.cloudsim.core.SimEvent;
-import org.cloudbus.cloudsim.serverless.entities.ServerlessRequest;
+import org.cloudbus.cloudsim.serverless.components.process.ServerlessDatacenter;
+import org.cloudbus.cloudsim.serverless.components.process.ServerlessInvoker;
+import org.cloudbus.cloudsim.serverless.components.transfer.ServerlessRequest;
+import org.cloudbus.cloudsim.serverless.components.process.ServerlessContainer;
 import org.cloudbus.cloudsim.serverless.utils.CloudSimSCTags;
 import org.cloudbus.cloudsim.serverless.utils.Constants;
 

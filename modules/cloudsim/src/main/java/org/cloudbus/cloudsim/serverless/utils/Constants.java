@@ -28,7 +28,7 @@ public class Constants {
     /**
      * Startup delay for VMs and the containers are mentioned here.
      */
-    public static final double CONTAINER_STARTTUP_DELAY = 0.5;//the amount is in seconds
+    public static final double CONTAINER_STARTUP_DELAY = 0.5;//the amount is in seconds
     public static final double VM_STARTTUP_DELAY = 100;//the amoun is in seconds
     /**
      * Initial scheduling delay for a function request.
