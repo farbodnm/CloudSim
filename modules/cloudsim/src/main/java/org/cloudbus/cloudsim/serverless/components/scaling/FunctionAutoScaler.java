@@ -4,7 +4,7 @@ import org.cloudbus.cloudsim.serverless.components.process.ServerlessDatacenter;
 
 public class FunctionAutoScaler {
 
-    public FunctionAutoScaler(ServerlessDatacenter invoker) {
+    public FunctionAutoScaler(ServerlessDatacenter datacenter) {
 
     }
 
