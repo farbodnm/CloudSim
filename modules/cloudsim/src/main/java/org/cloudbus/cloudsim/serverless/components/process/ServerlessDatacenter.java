@@ -24,6 +24,7 @@ import java.util.*;
  * Creates invokers
  * Handles creation of containers when requests are submitted
  * Processes what happens when requests are submitted
+ * @todo Implement auto scaling
  */
 
 @Getter
@@ -34,12 +35,15 @@ public class ServerlessDatacenter extends PowerContainerDatacenterCM {
     private List<Container> containersToDestroy = new ArrayList<>();
     private static List<ServerlessInvoker> idleInvokers = new ArrayList<>();
     private static Map<Integer, Double> invokerRunTimes = new HashMap<>();
-    private boolean monitoring = false;
-    private boolean autoScalingInitialized = false;
     private FunctionAutoScaler autoScaler;
 
-    public ServerlessDatacenter(String name, ContainerDatacenterCharacteristics characteristics, ContainerVmAllocationPolicy vmAllocationPolicy, ContainerAllocationPolicy containerAllocationPolicy, List<Storage> storageList, double schedulingInterval, String experimentName, String logAddress, double vmStartupDelay, double containerStartupDelay) throws Exception {
+    private boolean isMonitored = false;
+    private boolean isAutoScalingInitialized = false;
+
+    public ServerlessDatacenter(String name, ContainerDatacenterCharacteristics characteristics, ContainerVmAllocationPolicy vmAllocationPolicy, ContainerAllocationPolicy containerAllocationPolicy, List<Storage> storageList, double schedulingInterval, String experimentName, String logAddress, double vmStartupDelay, double containerStartupDelay, boolean isMonitored) throws Exception {
         super(name, characteristics, vmAllocationPolicy, containerAllocationPolicy, storageList, schedulingInterval, experimentName, logAddress, vmStartupDelay, containerStartupDelay);
+        this.isMonitored = isMonitored;
+        autoScaler = new FunctionAutoScaler(this);
     }
 
     @Override
@@ -114,7 +118,7 @@ public class ServerlessDatacenter extends PowerContainerDatacenterCM {
             int[] data = new int[4];
             if (result) {
                 ServerlessInvoker invoker = (ServerlessInvoker) container.getVm();
-                if (monitoring) {
+                if (isMonitored) {
                     if (invoker.getContainerList().size() == 1) {
                         idleInvokers.remove(invoker);
                         invoker.setStatus(InvokerStatus.ON);
@@ -197,8 +201,8 @@ public class ServerlessDatacenter extends PowerContainerDatacenterCM {
         }
 
         checkCloudletCompletion();
-        if (!autoScalingInitialized) {
-            autoScalingInitialized = true;
+        if (!isAutoScalingInitialized) {
+            isAutoScalingInitialized = true;
             autoScaler.scaleFunctions();
             destroyIdleContainers();
             send(this.getId(), Constants.AUTO_SCALING_INTERVAL, CloudSimSCTags.AUTO_SCALE);
