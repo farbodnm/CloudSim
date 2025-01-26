@@ -13,6 +13,8 @@ public class ServerlessRequest extends ContainerCloudlet {
     private double requestCPUShare = 0D;
     private double requestMemShare = 0D;
     private long containerMIPS = 0;
+    private int containerMemory = 0;
+
     // TODO: Do we need both?
     private UtilizationModelPartial utilizationModelCPU;
     private UtilizationModelPartial utilizationModelRAM;

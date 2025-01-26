@@ -4,7 +4,6 @@ import lombok.Getter;
 import lombok.Setter;
 import org.cloudbus.cloudsim.container.core.Container;
 import org.cloudbus.cloudsim.container.schedulers.ContainerCloudletScheduler;
-import org.cloudbus.cloudsim.serverless.components.scheduling.ServerlessRequestScheduler;
 import org.cloudbus.cloudsim.serverless.components.transfer.ServerlessRequest;
 
 import java.util.ArrayList;
@@ -30,27 +29,23 @@ public class ServerlessContainer extends Container {
 
     public ServerlessContainer(
             int id,
-            int userId,
-            double mips,
+            int controllerId,
             String functionType,
+            double mips,
             int numberOfPes,
             int ram,
             long bw,
             long size,
             String containerManager,
-            ContainerCloudletScheduler containerCloudletScheduler,
-            double schedulingInterval,
-            boolean newContainer,
-            boolean idling,
-            boolean reschedule,
-            double idleStartTime
+            ContainerCloudletScheduler containerRequestScheduler,
+            double schedulingInterval
     ) {
-        super(id, userId, mips, numberOfPes, ram, bw, size, containerManager, containerCloudletScheduler, schedulingInterval);
-        this.newContainer = newContainer;
-        this.reschedule = reschedule;
-        this.idling = idling;
+        super(id, controllerId, mips, numberOfPes, ram, bw, size, containerManager, containerRequestScheduler, schedulingInterval);
         this.functionType = functionType;
-        this.idleStartTime = idleStartTime;
+        this.newContainer = true;
+        this.reschedule = false;
+        this.idling = false;
+        this.idleStartTime = 0;
     }
 
     public double updateContainerProcessing(double currentTime, List<Double> mipsShare, ServerlessInvoker invoker) {
