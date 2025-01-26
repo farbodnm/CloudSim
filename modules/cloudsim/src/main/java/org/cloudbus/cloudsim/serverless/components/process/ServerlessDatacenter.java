@@ -65,6 +65,10 @@ public class ServerlessDatacenter extends PowerContainerDatacenterCM {
         }
     }
 
+    /**
+     * Event handlers and overrides
+     */
+
     @Override
     protected void processVmCreate(SimEvent ev, boolean ack) {
         ServerlessInvoker invoker = (ServerlessInvoker) ev.getData();
@@ -292,6 +296,10 @@ public class ServerlessDatacenter extends PowerContainerDatacenterCM {
         }
         containersToDestroy.clear();
     }
+
+    /**
+     * Auto scaler functionalities
+     */
 
     protected void sendScaledContainerCreationRequest(String[] data) {
         sendNow(Integer.parseInt(data[0]), CloudSimSCTags.SCALED_CONTAINER, data);
