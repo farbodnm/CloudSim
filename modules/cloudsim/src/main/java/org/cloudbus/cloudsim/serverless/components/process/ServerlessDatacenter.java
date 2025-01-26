@@ -295,6 +295,6 @@ public class ServerlessDatacenter extends PowerContainerDatacenterCM {
 
     // TODO: Design container auto scaling.
     private void processAutoScaling(SimEvent ev) {
-
+        throw new UnsupportedOperationException("Processing auto scale events not implemented.");
     }
 }
