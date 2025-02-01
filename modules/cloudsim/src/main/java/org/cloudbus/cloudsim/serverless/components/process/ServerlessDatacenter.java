@@ -109,7 +109,8 @@ public class ServerlessDatacenter extends PowerContainerDatacenterCM {
     public void processContainerSubmit(SimEvent ev, boolean ack) {
 
         ServerlessContainer container = (ServerlessContainer) ev.getData();
-        log.info("Processing new submitted container: {}", container.getId());
+        log.info("{}: {}: Processing new submitted container: {}",
+                CloudSim.clock(), getName(), container.getId());
         boolean result;
         // TODO: Review after writing the function scheduler
         if (container.getVm() != null) {
@@ -149,7 +150,8 @@ public class ServerlessDatacenter extends PowerContainerDatacenterCM {
                 invoker.addToPendingFunctionContainerMap(container, container.getFunctionType());
                 send(ev.getSource(), Constants.CONTAINER_STARTUP_DELAY, containerCloudSimTags.CONTAINER_CREATE_ACK, data);
             } else {
-                log.error("Couldn't find an invoker to host the container: {}", container.getId());
+                log.error("{}: {}: Couldn't find an invoker to host the container: {}",
+                        CloudSim.clock(), getName(), container.getId());
             }
         }
     }
@@ -161,8 +163,8 @@ public class ServerlessDatacenter extends PowerContainerDatacenterCM {
         try {
             ServerlessRequest request = (ServerlessRequest) ev.getData();
             if (request.isFinished()) {
-                log.warn("Request: {} owned by: {} with the name: {} was already finished before being submitted to datacenter",
-                        request.getCloudletId(), CloudSim.getEntityName(request.getUserId()), getName());
+                log.warn("{}: {}: Request: {} owned by: {} with the name: {} was already finished before being submitted to datacenter",
+                        CloudSim.clock(), getName(), request.getCloudletId(), CloudSim.getEntityName(request.getUserId()), getName());
                 int[] data = new int[3];
                 data[0] = getId();
                 data[1] = request.getCloudletId();
@@ -197,11 +199,11 @@ public class ServerlessDatacenter extends PowerContainerDatacenterCM {
                 sendNow(request.getUserId(), CloudSimSCTags.CLOUDLET_SUBMIT_ACK, request);
             }
         } catch (ClassCastException exception) {
-            log.error("Class cast exception occurred when submitting new request: {}, with message: {}",
-                    getName(), exception.getMessage());
+            log.error("{}: {}: Class cast exception occurred when submitting new request, with message: {}",
+                    CloudSim.clock(), getName(), exception.getMessage());
         } catch (Exception exception) {
-            log.error("Unexpected exception occurred when submitting new request: {}, with message: {}",
-                    getName(), exception.getMessage());
+            log.error("{}: {}: Unexpected exception occurred when submitting new request, with message: {}",
+                    CloudSim.clock(), getName(), exception.getMessage());
         }
 
         checkCloudletCompletion();

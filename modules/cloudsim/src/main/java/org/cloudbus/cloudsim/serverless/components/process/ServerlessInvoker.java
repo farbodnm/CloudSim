@@ -22,12 +22,16 @@ public class ServerlessInvoker extends PowerContainerVm {
     public double onTime = 0;
     public double offTime = 0;
 
-    private  double recordTime = 0; // TODO: ?
-    private boolean used;
+    private double recordTime = 0; // TODO: ?
+    private boolean isUsed;
     private InvokerStatus status = null;
 
-    private Map<String, List<ServerlessContainer>> pendingFunctionContainerMap = new HashMap<>();
     private List<ServerlessRequest> runningRequestsList = new ArrayList<>();
+    private Map<String, Integer> functionsMap = new HashMap<>();
+    private Map<String, List<ServerlessContainer>> pendingFunctionContainerMap = new HashMap<>();
+    private Map<String, List<ServerlessContainer>> functionContainersMap = new HashMap<>();
+    private Map<String, List<ServerlessRequest>> requestExecutionMap = new HashMap<>();
+    private Map<String, List<ServerlessRequest>> requestExecutionMapFull = new HashMap<>();
 
     public ServerlessInvoker(int id, int userId, double mips, float ram, long bw, long size, String vmm, ContainerScheduler containerScheduler, ContainerRamProvisioner containerRamProvisioner, ContainerBwProvisioner containerBwProvisioner, List<? extends ContainerPe> peList, double schedulingInterval) {
         super(id, userId, mips, ram, bw, size, vmm, containerScheduler, containerRamProvisioner, containerBwProvisioner, peList, schedulingInterval);
@@ -35,5 +39,18 @@ public class ServerlessInvoker extends PowerContainerVm {
 
     public void addToPendingFunctionContainerMap(ServerlessContainer container, String functionId) {
 
+    }
+
+    public void addToFunctionContainerMap(ServerlessContainer container, String functionId) {
+
+        if (!functionContainersMap.containsKey(functionId)) {
+            List<ServerlessContainer> containerList = new ArrayList<>();
+            containerList.add(container);
+            functionContainersMap.put(functionId, containerList);
+        } else {
+            if (!functionContainersMap.get(functionId).contains(container)) {
+                functionContainersMap.get(functionId).add(container);
+            }
+        }
     }
 }

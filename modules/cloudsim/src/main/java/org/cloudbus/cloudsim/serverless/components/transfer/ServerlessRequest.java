@@ -6,6 +6,10 @@ import org.cloudbus.cloudsim.UtilizationModel;
 import org.cloudbus.cloudsim.container.core.ContainerCloudlet;
 import org.cloudbus.cloudsim.serverless.components.model.UtilizationModelPartial;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 @Setter
 @Getter
 public class ServerlessRequest extends ContainerCloudlet {
@@ -14,6 +18,7 @@ public class ServerlessRequest extends ContainerCloudlet {
     private double requestMemShare = 0D;
     private long containerMIPS = 0;
     private int containerMemory = 0;
+    private String functionId = null;
 
     // TODO: Do we need both?
     private UtilizationModelPartial utilizationModelCPU;

@@ -16,6 +16,7 @@ public class ServerlessContainer extends Container {
     public boolean newContainer;
 
     private boolean firstProcess = false;
+    private double startTime;
     private double idleStartTime;
     private double finishTime = 0;
     private boolean reschedule;
