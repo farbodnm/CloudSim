@@ -21,13 +21,20 @@ import org.cloudbus.cloudsim.util.MathUtil;
 
 import java.util.*;
 
+/**
+ * Broker class for CloudSimSC extension. This class represents a broker (Service Provider)
+ * who uses the Cloud data center.
+ *
+ * @author Anupama Mampage
+ * @author Farbod Nazari
+ */
+
 @Slf4j
 @Getter
 @Setter
 public class ServerlessController extends ContainerDatacenterBroker {
 
     protected ServerlessDatacenter datacenter;
-
     private RequestLoadBalancer loadBalancer;
 
     protected List<ServerlessContainer> containerDestroyedList;
