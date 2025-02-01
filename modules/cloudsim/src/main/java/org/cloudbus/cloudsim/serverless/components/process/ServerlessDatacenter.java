@@ -21,10 +21,10 @@ import java.util.*;
 
 
 /**
- * Creates invokers
- * Handles creation of containers when requests are submitted
- * Processes what happens when requests are submitted
- * @todo Implement auto scaling
+ * Datacenter class for CloudSimSC extension. This class represents the physical infrastructure of the service provider
+ *
+ * @author Anupama Mampage
+ * @author Farbod Nazari
  */
 
 @Getter
