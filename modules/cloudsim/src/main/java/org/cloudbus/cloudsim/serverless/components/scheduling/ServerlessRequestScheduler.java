@@ -1,5 +1,7 @@
 package org.cloudbus.cloudsim.serverless.components.scheduling;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.cloudbus.cloudsim.Cloudlet;
 import org.cloudbus.cloudsim.Consts;
 import org.cloudbus.cloudsim.ResCloudlet;
@@ -12,6 +14,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+@Getter
+@Setter
 public class ServerlessRequestScheduler extends ContainerCloudletSchedulerDynamicWorkload {
 
     private double longestContainerRunTime = 0;

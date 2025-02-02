@@ -32,9 +32,10 @@ import java.util.*;
 @Slf4j
 public class ServerlessDatacenter extends PowerContainerDatacenterCM {
 
+    public static Map<Integer, Double> invokerRunTimes = new HashMap<>();
+    public static List<ServerlessInvoker> idleInvokers = new ArrayList<>();
+
     private List<Container> containersToDestroy = new ArrayList<>();
-    private static List<ServerlessInvoker> idleInvokers = new ArrayList<>();
-    private static Map<Integer, Double> invokerRunTimes = new HashMap<>();
     private FunctionAutoScaler autoScaler;
 
     private boolean isMonitored = false;
