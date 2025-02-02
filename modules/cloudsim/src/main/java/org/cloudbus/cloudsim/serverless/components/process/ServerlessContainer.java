@@ -10,6 +10,13 @@ import org.cloudbus.cloudsim.serverless.components.transfer.ServerlessRequest;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Container class for CloudSimSC extension.
+ *
+ * @author Anupama Mampage
+ * @author Farbod Nazari
+ */
+
 @Getter
 @Setter
 public class ServerlessContainer extends Container {
