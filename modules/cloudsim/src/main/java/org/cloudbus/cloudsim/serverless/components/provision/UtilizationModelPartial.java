@@ -1,7 +1,13 @@
-package org.cloudbus.cloudsim.serverless.components.model;
+package org.cloudbus.cloudsim.serverless.components.provision;
 
 import org.cloudbus.cloudsim.UtilizationModel;
 import org.cloudbus.cloudsim.serverless.components.transfer.ServerlessRequest;
+
+/**
+ * New utilization model class for partial usage of a resource
+ *
+ * @author Anupama Mampage
+ */
 
 public class UtilizationModelPartial implements UtilizationModel {
 

@@ -4,11 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.cloudbus.cloudsim.UtilizationModel;
 import org.cloudbus.cloudsim.container.core.ContainerCloudlet;
-import org.cloudbus.cloudsim.serverless.components.model.UtilizationModelPartial;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import org.cloudbus.cloudsim.serverless.components.provision.UtilizationModelPartial;
 
 @Setter
 @Getter
