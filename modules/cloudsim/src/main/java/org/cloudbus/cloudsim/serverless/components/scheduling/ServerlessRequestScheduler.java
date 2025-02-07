@@ -20,6 +20,7 @@ public class ServerlessRequestScheduler extends ContainerCloudletSchedulerDynami
 
     private double longestContainerRunTime = 0;
     private double containerQueueTime = 0;
+    private double totalCurrentAllocatedMipsShareForRequests;
 
     protected int currentCPUs = 0;
 

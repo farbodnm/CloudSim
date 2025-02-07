@@ -4,6 +4,7 @@ import org.cloudbus.cloudsim.power.models.PowerModel;
 import org.cloudbus.cloudsim.power.models.PowerModelSpecPowerHpProLiantMl110G4Xeon3040;
 import org.cloudbus.cloudsim.power.models.PowerModelSpecPowerHpProLiantMl110G5Xeon3075;
 import org.cloudbus.cloudsim.power.models.PowerModelSpecPowerIbmX3550XeonX5670;
+import org.cloudbus.cloudsim.serverless.enums.ScalingTriggerLogic;
 
 public class Constants {
 
@@ -136,7 +137,7 @@ public class Constants {
     public static final boolean SCALE_PER_REQUEST = true;
     public static final String VM_SELECTION_ALGO = "BPFF";
     public static final String HOR_SCALING_LOGIC = "cpuThreshold";
-    public static final String SCALING_TRIGGER_LOGIC = "cpuThreshold";
+    public static final ScalingTriggerLogic SCALING_TRIGGER_LOGIC = ScalingTriggerLogic.CPU_THRESHOLD;
     public static final String CONTAINER_SELECTION_ALGO = "FF";
     public static final int MAX_RESCHEDULE_TRIES = 8;
     public static final boolean MONITORING = true;

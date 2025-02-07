@@ -41,10 +41,23 @@ public class ServerlessDatacenter extends PowerContainerDatacenterCM {
     private boolean isMonitored = false;
     private boolean isAutoScalingInitialized = false;
 
-    public ServerlessDatacenter(String name, ContainerDatacenterCharacteristics characteristics, ContainerVmAllocationPolicy vmAllocationPolicy, ContainerAllocationPolicy containerAllocationPolicy, List<Storage> storageList, double schedulingInterval, String experimentName, String logAddress, double vmStartupDelay, double containerStartupDelay, boolean isMonitored) throws Exception {
+    public ServerlessDatacenter(
+            String name,
+            ContainerDatacenterCharacteristics characteristics,
+            ContainerVmAllocationPolicy vmAllocationPolicy,
+            ContainerAllocationPolicy containerAllocationPolicy,
+            List<Storage> storageList,
+            double schedulingInterval,
+            String experimentName,
+            String logAddress,
+            double vmStartupDelay,
+            double containerStartupDelay,
+            boolean isMonitored,
+            FunctionAutoScaler functionAutoScaler
+    ) throws Exception {
         super(name, characteristics, vmAllocationPolicy, containerAllocationPolicy, storageList, schedulingInterval, experimentName, logAddress, vmStartupDelay, containerStartupDelay);
         this.isMonitored = isMonitored;
-        autoScaler = new FunctionAutoScaler(this);
+        this.autoScaler = functionAutoScaler;
     }
 
     @Override
