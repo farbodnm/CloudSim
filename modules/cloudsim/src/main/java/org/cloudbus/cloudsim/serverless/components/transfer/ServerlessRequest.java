@@ -4,7 +4,13 @@ import lombok.Getter;
 import lombok.Setter;
 import org.cloudbus.cloudsim.UtilizationModel;
 import org.cloudbus.cloudsim.container.core.ContainerCloudlet;
+import org.cloudbus.cloudsim.core.CloudSim;
 import org.cloudbus.cloudsim.serverless.components.provision.UtilizationModelPartial;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 @Setter
 @Getter
@@ -29,7 +35,48 @@ public class ServerlessRequest extends ContainerCloudlet {
         return utilizationModelCPU.getCPUUtilization(this);
     }
 
+    public double getUtilizationOfRAM() {
+        return utilizationModelRAM.getMemUtilization(this);
+    }
+
+    /**
+     * Datacenter functionalities
+    */
+
     public void setResourceParameter(final int resourceID, final double costPerCPU, final double costPerBw, int vmId) {
 
+        final Resource res = new Resource();
+        res.vmId = vmId;
+        res.resourceId = resourceID;
+        res.costPerSec = costPerCPU;
+        this.costPerBw = costPerBw;
+        res.resourceName = CloudSim.getEntityName(resourceID);
+        resList.add(res);
+        accumulatedBwCost = costPerBw * getCloudletFileSize();
+
+        if (index == -1 && record) {
+            write("Allocates this request to " + res.resourceName + " (ID #" + resourceID
+                    + ") with cost = $" + costPerCPU + "/sec");
+        } else if (record) {
+            final int id = resList.get(index).resourceId;
+            final String name = resList.get(index).resourceName;
+            write("Moves request from " + name + " (ID #" + id + ") to " + res.resourceName + " (ID #"
+                    + resourceID + ") with cost = $" + costPerCPU + "/sec");
+        }
+
+        index++;
+    }
+
+    /**
+     * Test functionalities
+     */
+
+    public String getResList() {
+
+        List<String> resStringList = new ArrayList<>();
+        for (Resource res: resList) {
+            resStringList.add(String.valueOf(res.vmId));
+        }
+        return String.join(", ", resStringList);
     }
 }
