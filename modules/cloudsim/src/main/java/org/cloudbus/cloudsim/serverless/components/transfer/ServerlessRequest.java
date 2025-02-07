@@ -20,15 +20,29 @@ public class ServerlessRequest extends ContainerCloudlet {
     private double requestMemShare = 0D;
     private long containerMIPS = 0;
     private int containerMemory = 0;
+    private int retry;
+    private boolean success;
+    private double arrivalTime = 0D;
+    private int priority = 0;
     private String functionId = null;
+    private double cpuShare = 0D;
+    private double memShare = 0D;
 
-    // TODO: Do we need both?
     private UtilizationModelPartial utilizationModelCPU;
     private UtilizationModelPartial utilizationModelRAM;
 
-    public ServerlessRequest(int requestId, double arrivalTime, String requestFunctionId, long requestLength, int pesNumber,  int containerMemory, long containerMIPS,  double cpuShareReq, double memShareReq, long requestFileSize, long requestOutputSize, UtilizationModelPartial utilizationModelCPU, UtilizationModelPartial utilizationModelRAM, UtilizationModel utilizationModelBw, int retry, boolean success) {
+    public ServerlessRequest(int requestId, double arrivalTime, String requestFunctionId, long requestLength, int pesNumber,  int containerMemory, long containerMIPS,  double cpuShare, double memShare, long requestFileSize, long requestOutputSize, UtilizationModelPartial utilizationModelCPU, UtilizationModelPartial utilizationModelRAM, UtilizationModel utilizationModelBw, int retry, boolean success) {
         super(requestId, requestLength, pesNumber, requestFileSize, requestOutputSize, utilizationModelCPU, utilizationModelRAM, utilizationModelBw);
+        this.retry = retry;
+        this.success = success;
+        this.functionId = requestFunctionId;
+        this.containerMemory = containerMemory;
+        this.containerMIPS = containerMIPS;
+        this.arrivalTime = arrivalTime;
         this.utilizationModelCPU = utilizationModelCPU;
+        this.utilizationModelRAM = utilizationModelRAM;
+        this.cpuShare = cpuShare;
+        this.memShare = memShare;
     }
 
     public double getUtilizationOfCpu() {
