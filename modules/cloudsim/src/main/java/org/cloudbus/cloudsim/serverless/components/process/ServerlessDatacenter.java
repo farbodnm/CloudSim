@@ -11,6 +11,7 @@ import org.cloudbus.cloudsim.container.resourceAllocators.ContainerVmAllocationP
 import org.cloudbus.cloudsim.core.CloudSim;
 import org.cloudbus.cloudsim.core.SimEvent;
 import org.cloudbus.cloudsim.serverless.components.scaling.FunctionAutoScaler;
+import org.cloudbus.cloudsim.serverless.components.scheduling.FunctionScheduler;
 import org.cloudbus.cloudsim.serverless.components.scheduling.ServerlessRequestScheduler;
 import org.cloudbus.cloudsim.serverless.components.transfer.ServerlessRequest;
 import org.cloudbus.cloudsim.serverless.enums.InvokerStatus;
@@ -170,6 +171,10 @@ public class ServerlessDatacenter extends PowerContainerDatacenterCM {
         }
     }
 
+    private void processAutoScaling(SimEvent ev) {
+        throw new UnsupportedOperationException("Processing auto scale events not implemented.");
+    }
+
     @Override
     protected void processCloudletSubmit(SimEvent ev, boolean ack) {
 
@@ -317,12 +322,11 @@ public class ServerlessDatacenter extends PowerContainerDatacenterCM {
      * Auto scaler functionalities
      */
 
-    protected void sendScaledContainerCreationRequest(String[] data) {
+    public void sendScaledContainerCreationRequest(String[] data) {
         sendNow(Integer.parseInt(data[0]), CloudSimSCTags.SCALED_CONTAINER, data);
     }
 
-    // TODO: Design container auto scaling.
-    private void processAutoScaling(SimEvent ev) {
-        throw new UnsupportedOperationException("Processing auto scale events not implemented.");
+    public void containerVerticalScale(ServerlessContainer container, ServerlessInvoker invoker, int cpuChange, int memChange) {
+        boolean result = ((FunctionScheduler) getContainerAllocationPolicy()).reallocateVmResourcesForContainer(container, invoker, cpuChange, memChange);
     }
 }

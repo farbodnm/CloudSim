@@ -281,6 +281,7 @@ public class FunctionAutoScaler {
                     for (int x = 0; x< (Constants.CONTAINER_RAM_INCREMENT).length; x++){
                         if(unAVailableActionlistRam.containsKey(functionId)){
                             if (!unAVailableActionlistRam.get(functionId).contains(x)){
+                                // here
                                 if (Constants.CONTAINER_RAM_INCREMENT[x]*numContainers > vm.getContainerRamProvisioner().getAvailableVmRam() || Constants.CONTAINER_RAM_INCREMENT[x]*numContainers + vmUsedupRam < 0 || (ramForContainerType + Constants.CONTAINER_RAM_INCREMENT[x]) > Constants.MAX_CONTAINER_RAM || (ramForContainerType + Constants.CONTAINER_RAM_INCREMENT[x]) < Constants.MIN_CONTAINER_RAM || (ramForContainerType + Constants.CONTAINER_RAM_INCREMENT[x]) < containerRAMUtilMin* ramForContainerType){
                                     unAVailableActionlistRam.get(functionId).add(Constants.CONTAINER_RAM_INCREMENT[x]);
                                 }
