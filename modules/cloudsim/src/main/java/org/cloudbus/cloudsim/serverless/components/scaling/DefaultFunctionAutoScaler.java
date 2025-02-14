@@ -1,6 +1,5 @@
 package org.cloudbus.cloudsim.serverless.components.scaling;
 
-import org.cloudbus.cloudsim.container.core.Container;
 import org.cloudbus.cloudsim.container.core.ContainerHost;
 import org.cloudbus.cloudsim.container.core.ContainerVm;
 import org.cloudbus.cloudsim.serverless.components.process.ServerlessContainer;
@@ -101,7 +100,7 @@ public class DefaultFunctionAutoScaler extends FunctionAutoScaler {
                                 functionNestedMap.put(key, functionMap);
                             }
                             value.forEach((container -> {
-                                if (container.getRunningTasks().isEmpty()) {
+                                if (container.getRunningRequests().isEmpty()) {
                                     emptyContainers.computeIfAbsent(key, k -> new ArrayList<>()).add(container);
                                 }
                                 functionNestedMap.get(key).put(

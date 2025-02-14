@@ -9,8 +9,6 @@ import org.cloudbus.cloudsim.serverless.components.provision.UtilizationModelPar
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collector;
-import java.util.stream.Collectors;
 
 @Setter
 @Getter
@@ -49,7 +47,7 @@ public class ServerlessRequest extends ContainerCloudlet {
         return utilizationModelCPU.getCPUUtilization(this);
     }
 
-    public double getUtilizationOfRAM() {
+    public double getUtilizationOfRam() {
         return utilizationModelRAM.getMemUtilization(this);
     }
 
@@ -79,6 +77,14 @@ public class ServerlessRequest extends ContainerCloudlet {
         }
 
         index++;
+    }
+
+    /**
+     * Public functionalities
+     */
+
+    public void incrementRetryCount() {
+        retry++;
     }
 
     /**

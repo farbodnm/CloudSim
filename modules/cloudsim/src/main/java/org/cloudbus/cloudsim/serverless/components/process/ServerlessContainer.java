@@ -31,9 +31,9 @@ public class ServerlessContainer extends Container {
     private boolean idling;
     private String functionType;
 
-    private List<ServerlessRequest> pendingTasks = new ArrayList<>();
-    private List<ServerlessRequest> runningTasks = new ArrayList<>();
-    private List<ServerlessRequest> finishedTasks = new ArrayList<>();
+    private List<ServerlessRequest> pendingRequests = new ArrayList<>();
+    private List<ServerlessRequest> runningRequests = new ArrayList<>();
+    private List<ServerlessRequest> finishedRequests = new ArrayList<>();
 
     public ServerlessContainer(
             int id,
@@ -61,5 +61,17 @@ public class ServerlessContainer extends Container {
             return ((ServerlessRequestScheduler) getContainerCloudletScheduler()).updateContainerProcessing(currentTime, mipsShare, invoker);
         }
         return 0D;
+    }
+
+    public void addToRunningRequests(ServerlessRequest request) {
+        runningRequests.add(request);
+    }
+
+    public void removeFromRunningRequests(ServerlessRequest request) {
+        runningRequests.remove(request);
+    }
+
+    public void addToFinishedRequests(ServerlessRequest request) {
+        finishedRequests.add(request);
     }
 }

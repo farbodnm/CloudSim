@@ -11,6 +11,7 @@ import org.cloudbus.cloudsim.container.lists.ContainerList;
 import org.cloudbus.cloudsim.container.lists.ContainerVmList;
 import org.cloudbus.cloudsim.core.CloudSim;
 import org.cloudbus.cloudsim.core.SimEvent;
+import org.cloudbus.cloudsim.serverless.components.loadbalancer.RequestLoadBalancer;
 import org.cloudbus.cloudsim.serverless.components.process.ServerlessDatacenter;
 import org.cloudbus.cloudsim.serverless.components.process.ServerlessInvoker;
 import org.cloudbus.cloudsim.serverless.components.transfer.ServerlessRequest;
@@ -27,6 +28,8 @@ import java.util.*;
  *
  * @author Anupama Mampage
  * @author Farbod Nazari
+ *
+ * TODO: Add congestion factor.
  */
 
 @Slf4j
@@ -45,7 +48,7 @@ public class ServerlessController extends ContainerDatacenterBroker {
     protected List<Double> meanSumOfInvokersCounts = new ArrayList<>();
 
     protected Map<String, List<ServerlessInvoker>> functionInvokersMap = new HashMap<>();
-    protected List<ServerlessRequest> functionsToSubmitOnContainerCreation = new ArrayList<>();
+    protected List<ServerlessRequest> requestsToSubmitOnContainerCreation = new ArrayList<>();
     private Map<ServerlessInvoker, List<ServerlessRequest>> invokerTempTimeMap = new HashMap<>();
 
     public Queue<Double> requestArrivalTimes = new LinkedList<>();
@@ -123,7 +126,6 @@ public class ServerlessController extends ContainerDatacenterBroker {
         }
     }
 
-    // TODO: Shouldn't there be a limit on the to submit on container creation requests?
     @Override
     public void processContainerCreate(SimEvent ev) {
         int[] data = (int[]) ev.getData();
@@ -171,7 +173,7 @@ public class ServerlessController extends ContainerDatacenterBroker {
         incrementContainersAcks();
         List<ServerlessRequest> toRemove = new ArrayList<>();
 
-        for (ServerlessRequest request: functionsToSubmitOnContainerCreation) {
+        for (ServerlessRequest request: requestsToSubmitOnContainerCreation) {
             if (request.getContainerId() == containerId) {
                 ServerlessInvoker invoker = ContainerVmList.getById(getVmsCreatedList(), invokerId); // Core
                 if (invoker != null) {
@@ -184,7 +186,7 @@ public class ServerlessController extends ContainerDatacenterBroker {
                 }
             }
         }
-        functionsToSubmitOnContainerCreation.removeAll(toRemove);
+        requestsToSubmitOnContainerCreation.removeAll(toRemove);
         toRemove.clear();
     }
 
@@ -335,8 +337,8 @@ public class ServerlessController extends ContainerDatacenterBroker {
         requestScheduler.deAllocateResources(request);
 
         getCloudletReceivedList().add(request);
-        ((ServerlessContainer) ContainerList.getById(getContainerList(), request.getContainerId())).getRunningTasks().remove(request);
-        ((ServerlessContainer) ContainerList.getById(getContainerList(), request.getContainerId())).getFinishedTasks().add(request);
+        ((ServerlessContainer) ContainerList.getById(getContainerList(), request.getContainerId())).removeFromRunningRequests(request);
+        ((ServerlessContainer) ContainerList.getById(getContainerList(), request.getContainerId())).addToFinishedRequests(request);
 
         log.info("{}: {}: request with id: {} returned.",
                 CloudSim.clock(), getName(), request.getCloudletId());
@@ -348,7 +350,7 @@ public class ServerlessController extends ContainerDatacenterBroker {
      * Load balancer functionalities
      */
 
-    protected void sendFunctionRetryRequest(ServerlessRequest request) {
+    public void sendFunctionRetryRequest(ServerlessRequest request) {
         send(
                 getId(),
                 Constants.FUNCTION_SCHEDULING_RETRY_DELAY,
@@ -357,8 +359,7 @@ public class ServerlessController extends ContainerDatacenterBroker {
         );
     }
 
-    // TODO: why does every container requires a new request scheduler?
-    protected void createContainer(ServerlessRequest request, String functionTypeId, int controllerId) {
+    public void createContainer(ServerlessRequest request, String functionTypeId, int controllerId) {
 
         ServerlessContainer container =
                 new ServerlessContainer(
@@ -380,7 +381,7 @@ public class ServerlessController extends ContainerDatacenterBroker {
         getContainerList().add(container);
     }
 
-    protected void addToFunctionInvokersMap(ServerlessInvoker invoker, String functionId) {
+    public void addToFunctionInvokersMap(ServerlessInvoker invoker, String functionId) {
 
         if (!functionInvokersMap.containsKey(functionId)) {
             List<ServerlessInvoker> invokerListMap = new ArrayList<>();
@@ -393,12 +394,12 @@ public class ServerlessController extends ContainerDatacenterBroker {
         }
     }
 
-    protected void addToInvokerRequestsMap(ServerlessRequest request, ServerlessInvoker invoker) {
+    public void addToInvokerRequestsMap(ServerlessRequest request, ServerlessInvoker invoker) {
         int count = invoker.getFunctionsMap().getOrDefault(request.getFunctionId(), 0);
         invoker.getFunctionsMap().put(request.getFunctionId(), count + 1);
     }
 
-    protected void removeFromInvokerRequestsMap(ServerlessRequest request, ServerlessInvoker invoker) {
+    public void removeFromInvokerRequestsMap(ServerlessRequest request, ServerlessInvoker invoker) {
         int count = invoker.getFunctionsMap().get(request.getFunctionId());
         invoker.getFunctionsMap().put(request.getFunctionId(), count - 1);
         if (count == 1) {
@@ -409,7 +410,7 @@ public class ServerlessController extends ContainerDatacenterBroker {
         }
     }
 
-    protected void submitRequestToDC(ServerlessRequest request, int invokerId, double delay, int containerId) {
+    public void submitRequestToDC(ServerlessRequest request, int invokerId, double delay, int containerId) {
 
         request.setVmId(invokerId);
         cloudletsSubmitted++;
@@ -423,6 +424,11 @@ public class ServerlessController extends ContainerDatacenterBroker {
         } else {
             sendNow(getVmsToDatacentersMap().get(request.getVmId()), CloudSimSCTags.CLOUDLET_SUBMIT_ACK, request);
         }
+    }
+
+    public void addToInvokerRequestMap(ServerlessRequest request, ServerlessInvoker invoker) {
+        int count = invoker.getRequestMap().getOrDefault(request.getFunctionId(), 0);
+        invoker.getRequestMap().put(request.getFunctionId(), count + 1);
     }
 
     /**

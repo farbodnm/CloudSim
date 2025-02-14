@@ -2,16 +2,11 @@ package org.cloudbus.cloudsim.serverless.components.scheduling;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.cloudbus.cloudsim.Cloudlet;
-import org.cloudbus.cloudsim.Consts;
-import org.cloudbus.cloudsim.ResCloudlet;
 import org.cloudbus.cloudsim.container.schedulers.ContainerCloudletSchedulerDynamicWorkload;
 import org.cloudbus.cloudsim.serverless.components.process.ServerlessContainer;
 import org.cloudbus.cloudsim.serverless.components.process.ServerlessInvoker;
 import org.cloudbus.cloudsim.serverless.components.transfer.ServerlessRequest;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 @Getter
@@ -39,5 +34,17 @@ public class ServerlessRequestScheduler extends ContainerCloudletSchedulerDynami
 
     public void deAllocateResources(ServerlessRequest request) {
 
+    }
+
+    public boolean isSuitableForRequest(ServerlessRequest request, ServerlessContainer contaienr) {
+        return true;
+    }
+
+    public void addToTotalCurrentAllocatedRamForRequests(ServerlessRequest request) {
+        totalCurrentAllocatedRamForRequests += request.getContainerMemory() * request.getUtilizationOfRam();
+    }
+
+    public void addToTotalCurrentAllocatedCpuForRequests(ServerlessRequest request) {
+        totalCurrentAllocatedMipsShareForRequests += request.getUtilizationOfCpu();
     }
 }

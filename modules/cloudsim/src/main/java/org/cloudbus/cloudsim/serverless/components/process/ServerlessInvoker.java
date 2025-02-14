@@ -36,7 +36,7 @@ public class ServerlessInvoker extends PowerContainerVm {
     public double onTime = 0;
     public double offTime = 0;
 
-    private double recordTime = 0; // TODO: ?
+    private double recordTime = 0;
     private boolean isUsed;
     private InvokerStatus status = null;
 
@@ -46,6 +46,7 @@ public class ServerlessInvoker extends PowerContainerVm {
     private Map<String, List<ServerlessContainer>> functionContainersMap = new HashMap<>();
     private Map<String, List<ServerlessRequest>> requestExecutionMap = new HashMap<>();
     private Map<String, List<ServerlessRequest>> requestExecutionMapFull = new HashMap<>();
+    private Map<String, Integer> requestMap = new HashMap<>();
 
     public ServerlessInvoker(int id, int userId, double mips, float ram, long bw, long size, String vmm, ContainerScheduler containerScheduler, ContainerRamProvisioner containerRamProvisioner, ContainerBwProvisioner containerBwProvisioner, List<? extends ContainerPe> peList, double schedulingInterval) {
         super(id, userId, mips, ram, bw, size, vmm, containerScheduler, containerRamProvisioner, containerBwProvisioner, peList, schedulingInterval);
