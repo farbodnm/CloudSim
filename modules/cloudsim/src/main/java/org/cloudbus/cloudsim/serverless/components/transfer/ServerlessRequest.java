@@ -1,144 +1,103 @@
 package org.cloudbus.cloudsim.serverless.components.transfer;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.cloudbus.cloudsim.UtilizationModel;
 import org.cloudbus.cloudsim.container.core.ContainerCloudlet;
 import org.cloudbus.cloudsim.core.CloudSim;
 import org.cloudbus.cloudsim.serverless.components.provision.UtilizationModelPartial;
 
-/**
- * Serverless request class for CloudSimSC extension. This class represents a single user request
- *
- * @author Anupama Mampage
- * Created on 3/25/2023
- */
+import java.util.ArrayList;
+import java.util.List;
 
+@Setter
+@Getter
 public class ServerlessRequest extends ContainerCloudlet {
 
-    private String requestType = null;
-    private String requestFunctionId = null;
-    private int containerMemory = 0;
+    private double requestCPUShare = 0D;
+    private double requestMemShare = 0D;
+    private double maxExecTime = 0D;
     private long containerMIPS = 0;
-    private double cpuShareReq = 0;
-    private double memShareReq = 0;
-    private double maxExecTime = 0;
-    private double arrivalTime = 0;
-    public boolean reschedule = false;
-    public boolean success = false;
-    public int retry = 0;
+    private int containerMemory = 0;
+    private int retry;
+    private boolean success;
+    private double arrivalTime = 0D;
     private int priority = 0;
-    private UtilizationModelPartial utilizationModelCpu;
-    private UtilizationModelPartial utilizationModelRam;
+    private String functionId = null;
+    private double cpuShare = 0D;
+    private double memShare = 0D;
 
-    public ServerlessRequest(int requestId, double arrivalTime, String requestFunctionId, long requestLength, int pesNumber,  int containerMemory, long containerMIPS,  double cpuShareReq, double memShareReq, long requestFileSize, long requestOutputSize, UtilizationModelPartial utilizationModelCpu, UtilizationModelPartial utilizationModelRam, UtilizationModel utilizationModelBw, int retry, boolean success) {
-        super(requestId, requestLength, pesNumber, requestFileSize, requestOutputSize, utilizationModelCpu, utilizationModelRam, utilizationModelBw);
+    private UtilizationModelPartial utilizationModelCPU;
+    private UtilizationModelPartial utilizationModelRAM;
 
-//        setRequestType(requestType);
-        setRequestFunctionId(requestFunctionId);
-        setContainerMemory(containerMemory);
-        setContainerMIPS(containerMIPS);
-//        setMaxExecTime(maxExecTime);
-        setArrivalTime(arrivalTime);
-        setPriority(priority);
-//        setReschedule(reschedule);
-        setSuccess(success);
-        setRetry(retry);
-        setUtilizationModelCpu(utilizationModelCpu);
-        setUtilizationModelRam(utilizationModelCpu);
-        setCpuShareRequest(cpuShareReq);
-        setMemShareRequest(memShareReq);
+    public ServerlessRequest(int requestId, double arrivalTime, String requestFunctionId, long requestLength, int pesNumber,  int containerMemory, long containerMIPS,  double cpuShare, double memShare, long requestFileSize, long requestOutputSize, UtilizationModelPartial utilizationModelCPU, UtilizationModelPartial utilizationModelRAM, UtilizationModel utilizationModelBw, int retry, boolean success) {
+        super(requestId, requestLength, pesNumber, requestFileSize, requestOutputSize, utilizationModelCPU, utilizationModelRAM, utilizationModelBw);
+        this.retry = retry;
+        this.success = success;
+        this.functionId = requestFunctionId;
+        this.containerMemory = containerMemory;
+        this.containerMIPS = containerMIPS;
+        this.arrivalTime = arrivalTime;
+        this.utilizationModelCPU = utilizationModelCPU;
+        this.utilizationModelRAM = utilizationModelRAM;
+        this.cpuShare = cpuShare;
+        this.memShare = memShare;
     }
 
-    public void setRequestType(String requestType){this.requestType = requestType;}
-    public void setPriority(int priority){this.priority = priority;}
-    public void setRequestFunctionId(String requestFunctionId){this.requestFunctionId = requestFunctionId;}
-    public void setContainerMemory(int containerMemory){this.containerMemory = containerMemory;}
-    public void setContainerMIPS(long containerMIPS){this.containerMIPS = containerMIPS;}
-    public void setCpuShareRequest(double cpuShareReq){this.cpuShareReq = cpuShareReq;}
-    public void setMemShareRequest(double memShareReq){this.memShareReq = memShareReq;}
-    public void setMaxExecTime(double maxExecTime){this.maxExecTime = maxExecTime;}
-    public void setArrivalTime(double arrivalTime){this.arrivalTime = arrivalTime;}
-//    public void setReschedule(boolean reschedule){this.reschedule = reschedule;}
-    public void setSuccess(boolean success){this.success = success;}
-    public void setRetry(int retry){this.retry = retry;}
+    public double getUtilizationOfCpu() {
+        return utilizationModelCPU.getCPUUtilization(this);
+    }
 
-    public String getRequestType() {return requestType;}
-    public String getRequestFunctionId() {return requestFunctionId;}
-    public int getContainerMemory() {return containerMemory;}
-    public long getContainerMIPS() {return containerMIPS;}
-    public double getCpuShareRequest() {return cpuShareReq;}
-    public double getMemShareRequest() {return memShareReq;}
-    public double getMaxExecTime() {return maxExecTime;}
-    public int getPriority() {return priority;}
-    public double getArrivalTime() {return arrivalTime;}
-//    public boolean getReschedule() {return reschedule;}
-    public boolean getSuccess() {return success;}
-    public int getRetry() {return retry;}
+    public double getUtilizationOfRam() {
+        return utilizationModelRAM.getMemUtilization(this);
+    }
 
+    /**
+     * Datacenter functionalities
+     */
 
-    public void setResourceParameter(final int resourceID, final double cost, int vmId) {
+    public void setResourceParameter(final int resourceID, final double costPerCPU, final double costPerBw, int vmId) {
+
         final Resource res = new Resource();
         res.vmId = vmId;
         res.resourceId = resourceID;
-        res.costPerSec = cost;
+        res.costPerSec = costPerCPU;
+        this.costPerBw = costPerBw;
         res.resourceName = CloudSim.getEntityName(resourceID);
-
-        // add into a list if moving to a new grid resource
         resList.add(res);
+        accumulatedBwCost = costPerBw * getCloudletFileSize();
 
         if (index == -1 && record) {
             write("Allocates this request to " + res.resourceName + " (ID #" + resourceID
-                    + ") with cost = $" + cost + "/sec");
+                    + ") with cost = $" + costPerCPU + "/sec");
         } else if (record) {
             final int id = resList.get(index).resourceId;
             final String name = resList.get(index).resourceName;
             write("Moves request from " + name + " (ID #" + id + ") to " + res.resourceName + " (ID #"
-                    + resourceID + ") with cost = $" + cost + "/sec");
+                    + resourceID + ") with cost = $" + costPerCPU + "/sec");
         }
 
-        index++;  // initially, index = -1
+        index++;
     }
 
+    /**
+     * Public functionalities
+     */
 
-    public void setResourceParameter(final int resourceID, final double costPerCPU, final double costPerBw, int vmId) {
-        setResourceParameter(resourceID, costPerCPU, vmId);
-        this.costPerBw = costPerBw;
-        accumulatedBwCost = costPerBw * getCloudletFileSize();
+    public void incrementRetryCount() {
+        retry++;
     }
+
+    /**
+     * Test functionalities
+     */
 
     public String getResList() {
-        String resString = "";
-        for(int x=0; x<resList.size(); x++){
-            if(x==resList.size()-1){
-                resString = resString.concat(Integer.toString(resList.get(x).vmId)) ;
-            }
-            else
-                resString = resString.concat(Integer.toString(resList.get(x).vmId)+" ,") ;
 
+        List<String> resStringList = new ArrayList<>();
+        for (Resource res: resList) {
+            resStringList.add(String.valueOf(res.vmId));
         }
-        return resString;
+        return String.join(", ", resStringList);
     }
-
-    public double getUtilizationOfCpu() {
-        return getUtilizationModelCpu().getCpuUtilization(this);
-    }
-
-    public double getUtilizationOfRam() {
-        return getUtilizationModelRam().getMemUtilization(this);
-    }
-    public void setUtilizationModelCpu(final UtilizationModelPartial utilizationModelCpu) {
-        this.utilizationModelCpu = utilizationModelCpu;
-    }
-
-    public void setUtilizationModelRam(final UtilizationModelPartial utilizationModelRam) {
-        this.utilizationModelRam = utilizationModelRam;
-    }
-
-    public UtilizationModelPartial getUtilizationModelCpu() {
-        return utilizationModelCpu;
-    }
-    public UtilizationModelPartial getUtilizationModelRam() {
-        return utilizationModelRam;
-    }
-
 }
-
