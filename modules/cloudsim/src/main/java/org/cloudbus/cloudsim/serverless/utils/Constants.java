@@ -4,6 +4,9 @@ import org.cloudbus.cloudsim.power.models.PowerModel;
 import org.cloudbus.cloudsim.power.models.PowerModelSpecPowerHpProLiantMl110G4Xeon3040;
 import org.cloudbus.cloudsim.power.models.PowerModelSpecPowerHpProLiantMl110G5Xeon3075;
 import org.cloudbus.cloudsim.power.models.PowerModelSpecPowerIbmX3550XeonX5670;
+import org.cloudbus.cloudsim.serverless.enums.ContainerSelectAlgo;
+import org.cloudbus.cloudsim.serverless.enums.HorizontalScalingLogic;
+import org.cloudbus.cloudsim.serverless.enums.ScalingTriggerLogic;
 
 public class Constants {
 
@@ -15,6 +18,7 @@ public class Constants {
     public static final boolean OUTPUT_CSV = false;
     public static final double SCHEDULING_INTERVAL = 300.0D;
     public static final double SIMULATION_LIMIT = 87400.0D;
+
     /**
      * request specs
      */
@@ -28,12 +32,14 @@ public class Constants {
     /**
      * Startup delay for VMs and the containers are mentioned here.
      */
-    public static final double CONTAINER_STARTTUP_DELAY = 0.5;//the amount is in seconds
+    public static final double CONTAINER_STARTUP_DELAY = 0.5;//the amount is in seconds
     public static final double VM_STARTTUP_DELAY = 100;//the amoun is in seconds
+
     /**
      * Initial scheduling delay for a function request.
      */
     public static final double FUNCTION_SCHEDULING_DELAY = 0.020;
+
     /**
      * Scheduling retry  gap for a function request.
      */
@@ -44,10 +50,8 @@ public class Constants {
     public static final double LATENCY_THRESHOLD = 0.10;
     public static final double SAFE_ZONE = 0.5;
     public static final double WARNING_ZONE = 0.75;
-
     public static final int NUM_TASKS = 50;
     public static final double CPU_USAGE_MONITORING_INTERVAL = 0.01;
-
     public static final double AUTO_SCALING_INTERVAL = 2;
     public static final double FUNCTION_PLACEMENT_TIME = 0.002;
     public static final double MINIMUM_INTERVAL_BETWEEN_TWO_CLOUDLET_SUBMISSIONS = 0.001;
@@ -71,7 +75,6 @@ public class Constants {
      */
 
     public static final int CONTAINER_TYPES = 3;
-//    public static final int[] CONTAINER_MIPS = new int[]{4658, 9320, 18636};
     public static final double[] CONTAINER_MIPS = new double[]{4658, 9320, 18636};
     public static final int[] CONTAINER_MIPS_INCREMENT = new int[]{-932, -466, -233, 0, 233, 466, 932};
     public static final int[] CONTAINER_RAM = new int[]{512, 512, 512};
@@ -80,10 +83,8 @@ public class Constants {
     public static final int MIN_CONTAINER_RAM = 128;
     public static final int MAX_CONTAINER_MIPS = 11600;
     public static final int MAX_CONTAINER_RAM = 3072;
-
     public static final int[] CONTAINER_PES = new int[]{1, 1, 1};
     public static final int[] CONTAINER_CPU_SHARE = new int[]{128, 128, 128};
-
     public static final int CONTAINER_BW = 2500;
     public static final int CONTAINER_SIZE = 512;
     public static final int RAM_INCREMENT = 256;
@@ -112,7 +113,6 @@ public class Constants {
      * population.
      */
 
-
     public static final int NUMBER_HOSTS = 5;
     public static final int NUMBER_VMS = 20;
     public static final int NUMBER_requestS = 5;
@@ -126,6 +126,7 @@ public class Constants {
     /**
      * Algorithm specific parameters
      */
+
     public static final double OVER_UTILIZATION_THRESHOLD = 0.80;
     public static final double UNDER_UTILIZATION_THRESHOLD = 0.70;
     public static final double CONTAINER_SCALE_CPU_THRESHOLD = 0.40;
@@ -135,16 +136,14 @@ public class Constants {
     public static final boolean FUNCTION_VERTICAL_AUTOSCALING = false;
     public static final boolean SCALE_PER_REQUEST = true;
     public static final String VM_SELECTION_ALGO = "BPFF";
-    public static final String HOR_SCALING_LOGIC = "cpuThreshold";
-    public static final String SCALING_TRIGGER_LOGIC = "cpuThreshold";
-    public static final String CONTAINER_SELECTION_ALGO = "FF";
+    public static final HorizontalScalingLogic HOR_SCALING_LOGIC = HorizontalScalingLogic.CPU_THRESHOLD;
+    public static final ScalingTriggerLogic SCALING_TRIGGER_LOGIC = ScalingTriggerLogic.CPU_THRESHOLD;
+    public static final ContainerSelectAlgo CONTAINER_SELECTION_ALGO = ContainerSelectAlgo.FIRST_FIT;
     public static final int MAX_RESCHEDULE_TRIES = 8;
     public static final boolean MONITORING = true;
     public static final int MAX_REPLICAS = 50;
-
     public static final boolean CONTAINER_IDLING_ENABLED = false;
-
     public static final int CONTAINER_IDLING_TIME = 5;
-
+    public static final double STARTUP_TIME = 0.111;
 
 }
