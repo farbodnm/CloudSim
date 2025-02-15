@@ -1,4 +1,4 @@
-package org.cloudbus.cloudsim.serverless;
+package org.cloudbus.cloudsim.serverless.utils;
 
 import org.cloudbus.cloudsim.core.CloudSimTags;
 

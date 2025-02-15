@@ -1,4 +1,4 @@
-package org.cloudbus.cloudsim.serverless;
+package org.cloudbus.cloudsim.serverless.components.provision;
 
 import org.cloudbus.cloudsim.container.containerProvisioners.ContainerRamProvisionerSimple;
 import org.cloudbus.cloudsim.container.core.Container;

@@ -1,8 +1,9 @@
-package org.cloudbus.cloudsim.serverless;
+package org.cloudbus.cloudsim.serverless.components.transfer;
 
 import org.cloudbus.cloudsim.UtilizationModel;
 import org.cloudbus.cloudsim.container.core.ContainerCloudlet;
 import org.cloudbus.cloudsim.core.CloudSim;
+import org.cloudbus.cloudsim.serverless.components.provision.UtilizationModelPartial;
 
 /**
  * Serverless request class for CloudSimSC extension. This class represents a single user request

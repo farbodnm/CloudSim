@@ -1,14 +1,9 @@
-package org.cloudbus.cloudsim.serverless;
+package org.cloudbus.cloudsim.serverless.utils;
 
 import org.cloudbus.cloudsim.power.models.PowerModel;
 import org.cloudbus.cloudsim.power.models.PowerModelSpecPowerHpProLiantMl110G4Xeon3040;
 import org.cloudbus.cloudsim.power.models.PowerModelSpecPowerHpProLiantMl110G5Xeon3075;
 import org.cloudbus.cloudsim.power.models.PowerModelSpecPowerIbmX3550XeonX5670;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.*;
 
 public class Constants {
 
