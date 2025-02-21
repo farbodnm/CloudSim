@@ -25,7 +25,7 @@ public class ServerlessContainerScheduler extends ContainerSchedulerTimeSharedOv
      * Invoker functionalities
      */
 
-    public boolean isSuitableForContainer(ServerlessContainer container, ServerlessInvoker invoker) {
+    public boolean isSuitableForContainer(ServerlessContainer container) {
 
         int assignedPes = 0;
         for (ContainerPe pe: getPeList()) {

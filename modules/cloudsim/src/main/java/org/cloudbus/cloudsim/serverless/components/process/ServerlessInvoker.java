@@ -14,7 +14,7 @@ import org.cloudbus.cloudsim.serverless.components.scheduling.ServerlessContaine
 import org.cloudbus.cloudsim.serverless.components.scheduling.ServerlessRequestScheduler;
 import org.cloudbus.cloudsim.serverless.components.transfer.ServerlessRequest;
 import org.cloudbus.cloudsim.serverless.enums.InvokerStatus;
-import org.cloudbus.cloudsim.serverlessbac.Constants;
+import org.cloudbus.cloudsim.serverless.utils.Constants;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -180,8 +180,8 @@ public class ServerlessInvoker extends PowerContainerVm {
      */
 
     // TODO: To be changed.
-    public boolean isSuitableForContainer(ServerlessContainer container, ServerlessInvoker invoker) {
-        return ((ServerlessContainerScheduler) getContainerScheduler()).isSuitableForContainer(container, invoker)
+    public boolean isSuitableForContainer(ServerlessContainer container) {
+        return ((ServerlessContainerScheduler) getContainerScheduler()).isSuitableForContainer(container)
                 && getContainerRamProvisioner().isSuitableForContainer(container, container.getCurrentRequestedRam())
                 && getContainerBwProvisioner().isSuitableForContainer(container, container.getCurrentRequestedBw());
     }

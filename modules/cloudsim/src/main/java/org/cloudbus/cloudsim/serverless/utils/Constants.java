@@ -6,6 +6,7 @@ import org.cloudbus.cloudsim.power.models.PowerModelSpecPowerHpProLiantMl110G5Xe
 import org.cloudbus.cloudsim.power.models.PowerModelSpecPowerIbmX3550XeonX5670;
 import org.cloudbus.cloudsim.serverless.enums.ContainerSelectAlgo;
 import org.cloudbus.cloudsim.serverless.enums.HorizontalScalingLogic;
+import org.cloudbus.cloudsim.serverless.enums.InvokerSelectionAlgo;
 import org.cloudbus.cloudsim.serverless.enums.ScalingTriggerLogic;
 
 public class Constants {
@@ -135,7 +136,7 @@ public class Constants {
     public static final boolean FUNCTION_HORIZONTAL_AUTOSCALING = false;
     public static final boolean FUNCTION_VERTICAL_AUTOSCALING = false;
     public static final boolean SCALE_PER_REQUEST = true;
-    public static final String VM_SELECTION_ALGO = "BPFF";
+    public static final InvokerSelectionAlgo INVOKER_SELECTION_ALGO = InvokerSelectionAlgo.BEST_FIT_FIRST;
     public static final HorizontalScalingLogic HOR_SCALING_LOGIC = HorizontalScalingLogic.CPU_THRESHOLD;
     public static final ScalingTriggerLogic SCALING_TRIGGER_LOGIC = ScalingTriggerLogic.CPU_THRESHOLD;
     public static final ContainerSelectAlgo CONTAINER_SELECTION_ALGO = ContainerSelectAlgo.FIRST_FIT;
