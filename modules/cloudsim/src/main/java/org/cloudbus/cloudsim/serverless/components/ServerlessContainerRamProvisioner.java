@@ -13,14 +13,16 @@ public class ServerlessContainerRamProvisioner extends ContainerRamProvisionerSi
     public boolean allocateRamForContainer(Container container, float ram) {
 
         float oldRam = container.getCurrentAllocatedRam();
-        if (getAvailableVmRam() + oldRam >= ram) {
-            deallocateRamForContainer(container);
+        deallocateRamForContainer(container);
+        if (getAvailableVmRam() >= ram) {
+            System.out.println("New available ram: "+(getAvailableVmRam() - ram));
             setAvailableVmRam(getAvailableVmRam() - ram);
             getContainerRamTable().put(container.getUid(), ram);
             container.setCurrentAllocatedRam(ram);
             return true;
-        } else {
-            return false;
         }
+
+        container.setCurrentAllocatedRam(oldRam);
+        return false;
     }
 }

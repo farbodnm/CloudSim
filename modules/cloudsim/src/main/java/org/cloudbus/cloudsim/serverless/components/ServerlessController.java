@@ -3,17 +3,16 @@ package org.cloudbus.cloudsim.serverless.components;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.cloudbus.cloudsim.container.core.ContainerCloudlet;
-import org.cloudbus.cloudsim.container.core.ContainerDatacenterBroker;
-import org.cloudbus.cloudsim.container.core.ContainerVm;
-import org.cloudbus.cloudsim.container.core.containerCloudSimTags;
+import org.cloudbus.cloudsim.container.core.*;
 import org.cloudbus.cloudsim.container.lists.ContainerList;
 import org.cloudbus.cloudsim.container.lists.ContainerVmList;
 import org.cloudbus.cloudsim.core.CloudSim;
+import org.cloudbus.cloudsim.core.CloudSimTags;
 import org.cloudbus.cloudsim.core.SimEvent;
 import org.cloudbus.cloudsim.serverless.components.loadbalance.RequestLoadBalancer;
 import org.cloudbus.cloudsim.serverless.utils.CloudSimSCTags;
 import org.cloudbus.cloudsim.serverless.utils.Constants;
+import org.cloudbus.cloudsim.serverless.utils.IPair;
 import org.cloudbus.cloudsim.util.MathUtil;
 
 import java.util.*;
@@ -24,72 +23,95 @@ import java.util.*;
  *
  * @author Anupama Mampage
  * @author Farbod Nazari
- *
- * TODO: Add congestion factor.
  */
-
 @Slf4j
-@Getter
-@Setter
 public class ServerlessController extends ContainerDatacenterBroker {
 
-    protected ServerlessDatacenter datacenter;
-    private RequestLoadBalancer loadBalancer;
+    /**
+     * The idling VM list.
+     */
+    protected List<ServerlessInvoker> vmIdleList = new ArrayList<>();
 
-    protected List<ServerlessContainer> containerDestroyedList;
-    protected List<ServerlessInvoker> invokerIdleList = new ArrayList<>();
-    protected List<Double> averageInvokersUsageRecords = new ArrayList<>();
-    protected List<Integer> invokersCountList = new ArrayList<>();
-    protected List<Double> meanAverageInvokersUsageRecords = new ArrayList<>();
-    protected List<Double> meanSumOfInvokersCounts = new ArrayList<>();
+    protected List<Container> containerList = new ArrayList<>();
 
-    protected Map<String, List<ServerlessInvoker>> functionInvokersMap = new HashMap<>();
-    protected List<ServerlessRequest> requestsToSubmitOnContainerCreation = new ArrayList<>();
-    private Map<ServerlessInvoker, List<ServerlessRequest>> invokerTempTimeMap = new HashMap<>();
+    /**
+     * The containers destroyed list.
+     */
+    @Getter
+    protected List<? extends ServerlessContainer> containerDestroyedList;
 
-    public Queue<Double> requestArrivalTimes = new LinkedList<>();
+    private static int overbookingFactor = 0;
+
+    /**
+     * The arrival time of each serverless request
+     */
+    public Queue<Double> requestArrivalTime = new LinkedList<>();
+
+    /**
+     * The serverless function requests queue
+     */
     public Queue<ServerlessRequest> requestQueue = new LinkedList<>();
 
+    /**
+     * The task type and vm map of controller - contains the list of vms running each function type
+     */
+    protected Map<String, ArrayList<ServerlessInvoker>> functionVmMap = new HashMap<>();
+
+    protected List<ServerlessRequest> toSubmitOnContainerCreation = new ArrayList<>();
+
+    protected List<Double> averageVmUsageRecords = new ArrayList<>();
+
+    protected List<Double> meanAverageVmUsageRecords = new ArrayList<>();
+
+    protected List<Integer> vmCountList = new ArrayList<>();
+
+    protected List<Double> meanSumOfVmCount = new ArrayList<>();
+
+    protected double timeInterval = 50.0;
+
+    @Setter
     protected double requestSubmitClock = 0;
-    private int containersMadeCounter = 0; // Used as id
 
-    public int tasksReturnedCount = 0;
+    protected Map<ServerlessInvoker, ArrayList<ServerlessRequest>> vmTempTimeMap = new HashMap<>();
 
-    public ServerlessController(String name, int overBookingfactor) throws Exception {
-        super(name, overBookingfactor);
-        containerDestroyedList = new ArrayList<>();
-    }
+    /**
+     * The loadBalancer ID.
+     */
+    @Setter
+    private RequestLoadBalancer loadBalancer;
 
-    @Override
-    public void startEntity() {
-        super.startEntity();
-        while(!requestArrivalTimes.isEmpty()) {
-            send(
-                    getId(),
-                    requestArrivalTimes.remove(),
-                    CloudSimSCTags.CLOUDLET_SUBMIT,
-                    requestQueue.remove()
-            );
-        }
+    @Setter
+    ServerlessDatacenter datacenter;
+
+    public int containerId = 1;
+    public int existingContainerCount = 0;
+    public int noOfTasks = 0;
+    public int noOfTasksReturned = 0;
+
+    public ServerlessController(String name, int overbookingFactor) throws Exception {
+        super(name, overbookingFactor);
+        ServerlessController.overbookingFactor = overbookingFactor;
+        this.containerDestroyedList = new ArrayList<>();
     }
 
     @Override
     protected void processOtherEvent(SimEvent ev){
         switch (ev.getTag()) {
-            case CloudSimSCTags.CLOUDLET_SUBMIT:
+            case CloudSimTags.CLOUDLET_SUBMIT:
                 submitRequest(ev);
                 break;
-            case CloudSimSCTags.CLOUDLET_SUBMIT_ACK:
+            case CloudSimTags.CLOUDLET_SUBMIT_ACK:
                 processRequestSubmitAck(ev);
                 break;
-            case CloudSimSCTags.CONTAINER_DESTROY_ACK:
+            // other unknown tags are processed by this method
+            case CloudSimTags.CONTAINER_DESTROY_ACK:
                 processContainerDestroy(ev);
                 break;
             case CloudSimSCTags.SCALED_CONTAINER:
                 processScaledContainer(ev);
                 break;
             case CloudSimSCTags.RECORD_CPU_USAGE:
-                recordResourceUtilization(ev);
+                processRecordCPUUsage();
                 break;
             default:
                 super.processOtherEvent(ev);
@@ -97,28 +119,11 @@ public class ServerlessController extends ContainerDatacenterBroker {
         }
     }
 
-    /**
-     * Event processors
-     */
-
-    private void submitRequest(SimEvent ev) {
-
-        ServerlessRequest request = (ServerlessRequest) ev.getData();
-        log.info("{}: {}: Request: {} arrived.",
-                CloudSim.clock(), getName(), request.getCloudletId());
-
-        if (CloudSim.clock() == requestSubmitClock) {
-            send(
-                    getId(),
-                    Constants.MINIMUM_INTERVAL_BETWEEN_TWO_CLOUDLET_SUBMISSIONS,
-                    CloudSimSCTags.CLOUDLET_SUBMIT,
-                    request
-            );
-        } else {
-            datacenter.updateCloudletProcessing();
-            // Submit to core cloudlet list
-            getCloudletList().add(request);
-            loadBalancer.routeRequest(request);
+    @Override
+    public void startEntity() {
+        super.startEntity();
+        while(!requestArrivalTime.isEmpty()){
+            send(getId(), requestArrivalTime.remove(), CloudSimTags.CLOUDLET_SUBMIT,requestQueue.remove());
         }
     }
 
@@ -126,193 +131,89 @@ public class ServerlessController extends ContainerDatacenterBroker {
     public void processContainerCreate(SimEvent ev) {
 
         int[] data = (int[]) ev.getData();
-        int invokerId = data[0];
+        int vmId = data[0];
         int containerId = data[1];
         int result = data[2];
 
-        ServerlessContainer container = ContainerList.getById(getContainerList(), containerId);
+        ServerlessContainer cont = Objects.requireNonNull(ContainerList.getById(getContainerList(), containerId));
 
-        if (result == CloudSimSCTags.TRUE) {
-            if (invokerId == -1) {
-                log.error("{}: {}: A container was created on an invoker that doesn't exist.",
-                        CloudSim.clock(), getName());
+        if (result == CloudSimTags.TRUE) {
+            if (vmId == -1) {
+                log.error(
+                    "{}: {}: Container: {} was created successfully but no associated invoker was found, container will be stranded",
+                    CloudSim.clock(), getName(), containerId);
             } else {
-                getContainersToVmsMap().put(containerId, invokerId); // core
-                getContainersCreatedList().add(container); // core
-                try {
-                    if (container == null) {
-                        throw new NullPointerException("the container was not found");
-                    }
-                    container.setStartTime(CloudSim.clock());
-                    ServerlessInvoker invoker = ContainerVmList.getById(getVmsCreatedList(), invokerId);
-                    if (invoker == null) {
-                        throw new NullPointerException("no invoker was assigned to it");
-                    }
-                    invoker.getPendingFunctionContainerMap().get(container.getFunctionType()).remove(container);
-                    invoker.addToFunctionContainerMap(container, container.getFunctionType());
-
-                    int hostId = ContainerVmList.getById(getVmsCreatedList(), invokerId).getHost().getId();
-                    log.info(
-                            "{}: {}: Container with id: {} was created on invoker: {}, and host: {}.",
-                            CloudSim.clock(), getName(), containerId, invokerId, hostId);
-
-                    containersCreated++;
-                } catch (NullPointerException ex) {
-                    log.error("{}: {} A container sent a creation event but {}.",
-                            CloudSim.clock(), getName(), ex.getMessage());
-                }
+                getContainersToVmsMap().put(containerId, vmId);
+                getContainersCreatedList().add(cont);
+                cont.setStartTime(CloudSim.clock());
+                ServerlessInvoker vm = (ServerlessInvoker) Objects.requireNonNull(ContainerVmList.getById(getVmsCreatedList(), vmId));
+                vm.getFunctionContainerMapPending().get(cont.getFunctionType()).remove(cont);
+                vm.addToFunctionContainerMap(cont, cont.getFunctionType());
+                int hostId =
+                    ((ServerlessInvoker) Objects.requireNonNull(ContainerVmList.getById(getVmsCreatedList(), vmId)))
+                        .getHost()
+                        .getId();
+                log.info("{}: {}: Container: {} was created on vm: {} and host: {}",
+                    CloudSim.clock(), getName(), containerId, vmId, hostId);
+                setContainersCreated(getContainersCreated() + 1);
             }
         } else {
-            log.error("{}: {}: Failed to created container with id: {}.",
-                    CloudSim.clock(), getName(), containerId);
+            log.info("{}: {}: Creation of container: {} failed",
+                CloudSim.clock(), getName(), containerId);
         }
 
         incrementContainersAcks();
         List<ServerlessRequest> toRemove = new ArrayList<>();
+        if (!toSubmitOnContainerCreation.isEmpty()) {
+            for (ServerlessRequest request : toSubmitOnContainerCreation) {
+                if (request.getContainerId() == containerId) {
+                    ServerlessInvoker vm = (ServerlessInvoker) (ContainerVmList.getById(getVmsCreatedList(), vmId));
+                    if (vm != null) {
+                        addToVmTaskMap(request, vm);
+                        vmTempTimeMap.get(vm).remove(request);
+                        vm.addToFunctionContainerMap(cont, request.getRequestFunctionId());
+                        putInFunctionVmMap(((ServerlessInvoker) (ContainerVmList.getById(getVmsCreatedList(), vmId))), request.getRequestFunctionId());
+                        submitRequestToDC(request, vmId, 0, containerId);
 
-        for (ServerlessRequest request: requestsToSubmitOnContainerCreation) {
-            if (request.getContainerId() == containerId) {
-                ServerlessInvoker invoker = ContainerVmList.getById(getVmsCreatedList(), invokerId); // Core
-                if (invoker != null) {
-                    addToInvokerRequestsMap(request, invoker);
-                    invokerTempTimeMap.get(invoker).remove(request);
-                    invoker.addToFunctionContainerMap(container, request.getFunctionId());
-                    addToFunctionInvokersMap(ContainerVmList.getById(getVmsCreatedList(), invokerId), request.getFunctionId());
-                    submitRequestToDC(request, invokerId, 0, containerId);
-                    toRemove.add(request);
+                        toRemove.add(request);
+                    }
                 }
             }
-        }
-        requestsToSubmitOnContainerCreation.removeAll(toRemove);
-        toRemove.clear();
-    }
-
-    private void processRequestSubmitAck(SimEvent ev) {
-
-        ServerlessRequest request = (ServerlessRequest) ev.getData();
-        ServerlessContainer container = ContainerList.getById(getContainerList(), request.getContainerId());
-        assert container != null;
-        container.setNewContainer(false);
-    }
-
-    private void processContainerDestroy(SimEvent ev) {
-
-        int[] data = (int[]) ev.getData();
-        int datacenterId = data[0];
-        int containerId = data[1];
-        int result = data[2];
-        int invokerId = data[3];
-
-        if (result == CloudSimSCTags.TRUE) {
-            if (ContainerVmList.getById(getVmsCreatedList(), invokerId).getContainerList().isEmpty()) {
-                invokerIdleList.add(ContainerVmList.getById(getVmsCreatedList(), invokerId));
-            }
-
-            getContainersToVmsMap().remove(containerId);
-            getContainersCreatedList().remove(ContainerList.getById(getContainersCreatedList(), containerId));
-            getContainerDestroyedList().add(ContainerList.getById(getContainerList(), containerId));
-            ((ServerlessContainer) ContainerList.getById(getContainerList(), containerId)).setFinishTime(CloudSim.clock());
-            setContainersCreated(getContainersCreated() - 1);
-        } else {
-            log.error("{}: {}: Failed to destroy container with id: {}",
-                    CloudSim.clock(), getName(), containerId);
+            toSubmitOnContainerCreation.removeAll(toRemove);
+            toRemove.clear();
         }
     }
-
-    private void processScaledContainer(SimEvent ev) {
-
-        String[] data = (String[]) ev.getData();
-        int controllerId = Integer.parseInt(data[0]);
-        String functionTypeId = data[1];
-        double containerMips = Double.parseDouble(data[2]);
-        int containerRam = (int) Double.parseDouble(data[3]);
-        int containerPes = (int) Double.parseDouble(data[4]);
-
-        ServerlessContainer container =
-                new ServerlessContainer(
-                        containersMadeCounter++,
-                        controllerId,
-                        functionTypeId,
-                        containerMips,
-                        containerPes,
-                        containerRam,
-                        Constants.CONTAINER_BW,
-                        Constants.CONTAINER_SIZE,
-                        "Xen",
-                        new ServerlessRequestScheduler(
-                                containerMips,
-                                containerPes
-                        ),
-                        Constants.SCHEDULING_INTERVAL
-                );
-        getContainerList().add(container);
-        container.setWorkloadMips(container.getMips());
-        sendNow(getDatacenterIdsList().get(0), containerCloudSimTags.CONTAINER_SUBMIT, container);
-        log.info("{}: {}: Event sent to create to scale container: {}.",
-                CloudSim.clock(), getName(), container.getId());
-    }
-
-    private void recordResourceUtilization(SimEvent ignored) {
-
-        double utilization;
-        double utilizationSum = 0;
-        int invokerCount = 0;
-
-        for (ContainerVm vm: getVmsCreatedList()) {
-            ServerlessInvoker invoker = (ServerlessInvoker) vm;
-            utilization = 1 - invoker.getAvailableMips() / invoker.getTotalMips();
-            if (utilization > 0) {
-                invoker.setUsed(true);
-                invokerCount++;
-                utilizationSum += utilization;
-            }
-        }
-        if (utilizationSum > 0) {
-            averageInvokersUsageRecords.add(utilizationSum / invokerCount);
-            invokersCountList.add(invokerCount);
-        }
-
-        double sumOfAverage = 0;
-        double sumOfVmCount = 0;
-        if (averageInvokersUsageRecords.size() >= Constants.CPU_HISTORY_LENGTH) {
-            for (int i = 0; i < averageInvokersUsageRecords.size(); i++) {
-                sumOfAverage += averageInvokersUsageRecords.get(i);
-                sumOfVmCount += invokersCountList.get(i);
-            }
-            meanAverageInvokersUsageRecords.add(sumOfAverage / averageInvokersUsageRecords.size());
-            meanSumOfInvokersCounts.add(sumOfVmCount / invokersCountList.size());
-            averageInvokersUsageRecords.clear();
-            invokersCountList.clear();
-        }
-
-        send(this.getId(), Constants.CPU_USAGE_MONITORING_INTERVAL, CloudSimSCTags.RECORD_CPU_USAGE);
-    }
-
-    /**
-     * Overrides
-     */
 
     @Override
     protected void processVmCreate(SimEvent ev) {
 
         int[] data = (int[]) ev.getData();
         int datacenterId = data[0];
-        int invokerId = data[1];
+        int vmId = data[1];
         int result = data[2];
 
-        if (result == CloudSimSCTags.TRUE) {
+        if (result == CloudSimTags.TRUE) {
+            getVmsToDatacentersMap().put(vmId, datacenterId);
+            getVmsCreatedList().add(ContainerVmList.getById(getVmList(), vmId));
 
-            getVmsToDatacentersMap().put(invokerId, datacenterId); // Core
-            getVmsCreatedList().add(ContainerVmList.getById(getVmList(), invokerId));
-
-            invokerIdleList.add(ContainerVmList.getById(getVmList(), invokerId));
-            invokerTempTimeMap.put(ContainerVmList.getById(getVmList(), invokerId), new ArrayList<>());
-            log.info("{}: {}: New invoker with id: {} was created in the datacenter: {}.",
-                    CloudSim.clock(), getName(), invokerId, datacenterId);
+            // Add Vm to idle list
+            vmIdleList.add(ContainerVmList.getById(getVmList(), vmId));
+            ArrayList<ServerlessRequest> taskList = new ArrayList<>();
+            vmTempTimeMap.put(ContainerVmList.getById(getVmList(), vmId), taskList);
+            log.info(
+                "{}: {}: Invoker {} has been created on host: {} in datacenter: {}",
+                CloudSim.clock(),
+                getName(),
+                vmId,
+                ((ServerlessInvoker) Objects.requireNonNull(ContainerVmList.getById(getVmsCreatedList(), vmId)))
+                    .getHost()
+                    .getId(),
+                datacenterId
+            );
             setNumberOfCreatedVMs(getNumberOfCreatedVMs() + 1);
         } else {
-            log.error("{}: {}: Creation of new invoker with id: {} in the datacenter: {} failed.",
-                    CloudSim.clock(), getName(), invokerId, datacenterId);
+            log.error("{}: {}: Creation of Invoker {} failed in datacenter {}",
+                CloudSim.clock(), getName(), vmId, datacenterId);
         }
         incrementVmsAcks();
     }
@@ -320,146 +221,293 @@ public class ServerlessController extends ContainerDatacenterBroker {
     @Override
     protected void processCloudletReturn(SimEvent ev) {
 
-        // TODO: Maybe use immutable pairs if I can emit this event.
-        Map.Entry<ContainerCloudlet, ContainerVm> data =  (Map.Entry<ContainerCloudlet,ContainerVm>) ev.getData();
-        ServerlessRequest request = (ServerlessRequest) data.getKey();
-        ServerlessInvoker invoker = (ServerlessInvoker) data.getValue();
-        ServerlessContainer container = ContainerList.getById(getContainerList(), request.getContainerId());
+        @SuppressWarnings("unchecked")
+        IPair<ContainerCloudlet, ContainerVm> data = (IPair<ContainerCloudlet, ContainerVm>) ev.getData();
 
-        removeFromInvokerRequestsMap(request, invoker);
-        removeFromInvokerRequestExecutionMap(request, invoker);
+        ContainerCloudlet request = data.left();
+        ContainerVm vm = data.right();
+        ServerlessContainer container = Objects.requireNonNull(ContainerList.getById(getContainerList(), request.getContainerId()));
 
-        ServerlessRequestScheduler requestScheduler =
-                (ServerlessRequestScheduler) container.getContainerCloudletScheduler();
-        requestScheduler.deAllocateResources(request);
+        removeFromVmTaskMap((ServerlessRequest) request, (ServerlessInvoker) vm);
+        removeFromVmTaskExecutionMap((ServerlessRequest) request, (ServerlessInvoker) vm);
+        ServerlessRequestScheduler clScheduler = (ServerlessRequestScheduler) (container.getContainerCloudletScheduler());
+        clScheduler.deAllocateResources((ServerlessRequest) request);
 
         getCloudletReceivedList().add(request);
-        ((ServerlessContainer) ContainerList.getById(getContainerList(), request.getContainerId())).removeFromRunningRequests(request);
-        ((ServerlessContainer) ContainerList.getById(getContainerList(), request.getContainerId())).addToFinishedRequests(request);
+        (((ServerlessContainer) Objects.requireNonNull(ContainerList.getById(getContainerList(), request.getContainerId())))
+            .getRunningTasks()).remove(request);
+        ((ServerlessContainer) Objects.requireNonNull(ContainerList.getById(getContainerList(), request.getContainerId())))
+            .addToFinishedTasks((ServerlessRequest) request);
 
-        log.info("{}: {}: request with id: {} returned.",
-                CloudSim.clock(), getName(), request.getCloudletId());
+        log.info("{}: {}: request {} returned",
+            CloudSim.clock(), getName(), request.getCloudletId());
+
         cloudletsSubmitted--;
-        tasksReturnedCount++;
+        noOfTasksReturned++;
     }
 
     /**
-     * Load balancer functionalities
+     * Event processors
      */
 
-    public void sendFunctionRetryRequest(ServerlessRequest request) {
-        send(
-                getId(),
-                Constants.FUNCTION_SCHEDULING_RETRY_DELAY,
-                CloudSimSCTags.CLOUDLET_SUBMIT,
-                request
-        );
+    public void submitRequest(SimEvent ev) {
+        ServerlessRequest cl = (ServerlessRequest) ev.getData();
+        log.info("{}: {}: Request: {} arrived",
+            CloudSim.clock(), getName(), cl.getCloudletId());
+        if (CloudSim.clock() == requestSubmitClock) {
+            send(getId(), Constants.MINIMUM_INTERVAL_BETWEEN_TWO_CLOUDLET_SUBMISSIONS, CloudSimTags.CLOUDLET_SUBMIT, cl);
+        } else {
+            datacenter.updateCloudletProcessing();
+            addToCloudlets(cl);
+            loadBalancer.routeRequest(cl);
+        }
     }
 
-    public void createContainer(ServerlessRequest request, String functionTypeId, int controllerId) {
+    protected void processScaledContainer(SimEvent ev) {
+
+        String[] data = (String[]) ev.getData();
+        int brokerId = Integer.parseInt(data[0]);
+        String requestId = data[1];
+        double containerMips = Double.parseDouble(data[2]);
+        int containerRAM = (int) Double.parseDouble(data[3]);
+        int containerPES = (int) Double.parseDouble(data[4]);
 
         ServerlessContainer container =
-                new ServerlessContainer(
-                        containersMadeCounter++,
-                        controllerId,
-                        functionTypeId,
-                        request.getContainerMIPS(),
-                        request.getNumberOfPes(),
-                        request.getContainerMemory(),
-                        Constants.CONTAINER_BW,
-                        Constants.CONTAINER_SIZE,
-                        "Xen",
-                        new ServerlessRequestScheduler(
-                                request.getContainerMIPS(),
-                                request.getNumberOfPes()
-                        ),
-                        Constants.SCHEDULING_INTERVAL
-                );
+            new ServerlessContainer(
+                containerId,
+                brokerId,
+                requestId,
+                containerMips,
+                containerPES,
+                containerRAM,
+                Constants.CONTAINER_BW,
+                Constants.CONTAINER_SIZE,
+                "Xen",
+                new ServerlessRequestScheduler(
+                    containerMips,
+                    containerPES
+                ),
+                Constants.SCHEDULING_INTERVAL,
+                true,
+                false,
+                false,
+                0
+            );
         getContainerList().add(container);
-
-        if (request != null) {
-            request.setContainerId(containersMadeCounter);
-        }
-        submitContainer(request, container);
+        container.setWorkloadMips(container.getMips());
+        sendNow(getDatacenterIdsList().get(0), containerCloudSimTags.CONTAINER_SUBMIT, container);
+        containerId++;
+        log.info("{}: {}: Processed and created the now scaled container: {}",
+            CloudSim.clock(), getName(), container.getId());
     }
 
-    public void addToFunctionInvokersMap(ServerlessInvoker invoker, String functionId) {
+    public void processRequestSubmitAck(SimEvent ev) {
 
-        if (!functionInvokersMap.containsKey(functionId)) {
-            List<ServerlessInvoker> invokerListMap = new ArrayList<>();
-            invokerListMap.add(invoker);
-            functionInvokersMap.put(functionId, invokerListMap);
+        ServerlessRequest task = (ServerlessRequest) ev.getData();
+        (
+            (ServerlessContainer) Objects.requireNonNull(
+                ContainerList.getById(getContainersCreatedList(), task.getContainerId())
+            )
+        ).newContainer = false;
+    }
+
+    public void processContainerDestroy(SimEvent ev) {
+
+        int[] data = (int[]) ev.getData();
+        // data[0] (datacenter id) ignored
+        int containerId = data[1];
+        int result = data[2];
+        int oldVmId = data[3];
+
+        log.debug("{}: {}: Container {} is destroyed",
+            CloudSim.clock(), getName(), containerId);
+
+        if (result == CloudSimTags.TRUE) {
+
+            // If no more containers, add vm to idle list
+            if (
+                ((ServerlessInvoker) Objects.requireNonNull(ContainerVmList.getById(getVmsCreatedList(), oldVmId)))
+                    .getContainerList().isEmpty()
+            ) {
+                vmIdleList.add((ContainerVmList.getById(getVmsCreatedList(), oldVmId)));
+            }
+
+            getContainersToVmsMap().remove(containerId);
+            containersCreatedList.remove(ContainerList.getById(getContainersCreatedList(), containerId));
+            containerDestroyedList.add(ContainerList.getById(getContainerList(), containerId));
+            ((ServerlessContainer) Objects.requireNonNull(ContainerList.getById(getContainerList(), containerId)))
+                .setFinishTime(CloudSim.clock());
+            setContainersCreated(getContainersCreated() - 1);
         } else {
-            if (!functionInvokersMap.get(functionId).contains(invoker)) {
-                functionInvokersMap.get(functionId).add(invoker);
-            }
+            log.error("{}: {}: Failed to destroy container {}",
+                CloudSim.clock(), getName(), containerId);
         }
     }
 
-    public void addToInvokerRequestsMap(ServerlessRequest request, ServerlessInvoker invoker) {
-        int count = invoker.getFunctionsMap().getOrDefault(request.getFunctionId(), 0);
-        invoker.getFunctionsMap().put(request.getFunctionId(), count + 1);
-    }
+    private void processRecordCPUUsage() {
 
-    public void removeFromInvokerRequestsMap(ServerlessRequest request, ServerlessInvoker invoker) {
-        int count = invoker.getFunctionsMap().get(request.getFunctionId());
-        invoker.getFunctionsMap().put(request.getFunctionId(), count - 1);
-        if (count == 1) {
-            functionInvokersMap.get(request.getFunctionId()).remove(invoker);
-            if (functionInvokersMap.get(request.getFunctionId()).isEmpty()) {
-                functionInvokersMap.remove(request.getFunctionId());
+        double utilization;
+        int vmCount = 0;
+        double sum = 0;
+
+        for (int x = 0; x < getVmsCreatedList().size(); x++) {
+            utilization = 1 - getVmsCreatedList().get(x).getAvailableMips() / getVmsCreatedList().get(x).getTotalMips();
+            if (utilization > 0) {
+                ((ServerlessInvoker) getVmsCreatedList().get(x)).used = true;
+                vmCount++;
+                sum += utilization;
             }
         }
+
+        if (sum > 0) {
+            averageVmUsageRecords.add(sum / vmCount);
+            vmCountList.add(vmCount);
+        }
+
+        double sumOfAverage = 0;
+        double sumOfVmCount = 0;
+        if (averageVmUsageRecords.size() == Constants.CPU_HISTORY_LENGTH) {
+            for (int x = 0; x < Constants.CPU_HISTORY_LENGTH; x++) {
+                sumOfAverage += averageVmUsageRecords.get(x);
+                sumOfVmCount += vmCountList.get(x);
+            }
+            meanAverageVmUsageRecords.add(sumOfAverage / Constants.CPU_HISTORY_LENGTH);
+            meanSumOfVmCount.add(sumOfVmCount / Constants.CPU_HISTORY_LENGTH);
+            averageVmUsageRecords.clear();
+            vmCountList.clear();
+        }
+
+        send(this.getId(), Constants.CPU_USAGE_MONITORING_INTERVAL, CloudSimSCTags.RECORD_CPU_USAGE);
     }
 
-    public void submitRequestToDC(ServerlessRequest request, int invokerId, double delay, int containerId) {
+    /**
+     * Global functionalities
+     */
 
-        request.setVmId(invokerId);
+    public void addToVmTaskMap(ServerlessRequest task, ServerlessInvoker vm) {
+
+        int count = vm.getVmTaskMap().getOrDefault(task.getRequestFunctionId(), 0);
+        vm.getVmTaskMap().put(task.getRequestFunctionId(), count + 1);
+    }
+
+    public void submitRequestToDC(ServerlessRequest request, int vmId, double delay, int containerId){
+
+        request.setVmId(vmId);
         cloudletsSubmitted++;
         getCloudletSubmittedList().add(request);
         getCloudletList().remove(request);
 
-        log.info("{}: {}: Request with id: {} has been submitted to invoker: {} and container: {}.",
-                CloudSim.clock(), getName(), request.getCloudletId(), invokerId, containerId);
+        log.info("{}: {}: Request {} has been submitted to invoker invoker {} in container {}",
+            CloudSim.clock(), getName(), request.getCloudletId(), vmId, containerId);
+
         if (delay > 0) {
-            send(getVmsToDatacentersMap().get(request.getVmId()), delay, CloudSimSCTags.CLOUDLET_SUBMIT_ACK, request);
+            send(getVmsToDatacentersMap().get(request.getVmId()), delay, CloudSimTags.CLOUDLET_SUBMIT_ACK, request);
         } else {
-            sendNow(getVmsToDatacentersMap().get(request.getVmId()), CloudSimSCTags.CLOUDLET_SUBMIT_ACK, request);
+            sendNow(getVmsToDatacentersMap().get(request.getVmId()), CloudSimTags.CLOUDLET_SUBMIT_ACK, request);
         }
     }
 
-    public void addToInvokerRequestMap(ServerlessRequest request, ServerlessInvoker invoker) {
-        int count = invoker.getRequestMap().getOrDefault(request.getFunctionId(), 0);
-        invoker.getRequestMap().put(request.getFunctionId(), count + 1);
+    public void putInFunctionVmMap(ServerlessInvoker vm, String functionId) {
+
+        if (!functionVmMap.containsKey(functionId)) {
+            ArrayList<ServerlessInvoker> vmListMap = new ArrayList<>();
+            vmListMap.add(vm);
+            functionVmMap.put(functionId, vmListMap);
+        } else {
+            if (!functionVmMap.get(functionId).contains(vm)) {
+                functionVmMap.get(functionId).add(vm);
+            }
+        }
+    }
+
+    /**
+     * Load balancer specific functionalities
+     */
+
+    public void sendFunctionRetryRequest(ServerlessRequest req) {
+        send(getId(), Constants.FUNCTION_SCHEDULING_RETRY_DELAY, CloudSimTags.CLOUDLET_SUBMIT, req);
+    }
+
+    public void createContainer(ServerlessRequest cl, String requestId, int brokerId) {
+
+        ServerlessContainer container =
+            new ServerlessContainer(
+                containerId,
+                brokerId,
+                requestId,
+                cl.getContainerMIPS(),
+                cl.getNumberOfPes(),
+                cl.getContainerMemory(),
+                Constants.CONTAINER_BW,
+                Constants.CONTAINER_SIZE,
+                "Xen",
+                new ServerlessRequestScheduler(
+                    cl.getContainerMIPS(),
+                    cl.getNumberOfPes()
+                ),
+                Constants.SCHEDULING_INTERVAL,
+                true,
+                false,
+                false,
+                0
+            );
+        getContainerList().add(container);
+        cl.setContainerId(containerId);
+        submitContainer(container);
+        containerId++;
+    }
+
+    public void addToSubmitOnContainerCreation(ServerlessRequest request) {
+        toSubmitOnContainerCreation.add(request);
     }
 
     /**
      * Local functionalities
      */
 
-    protected void submitContainer(ServerlessRequest request, ServerlessContainer container) {
+    private void submitContainer(Container container) {
         container.setWorkloadMips(container.getMips());
         sendNow(getDatacenterIdsList().get(0), containerCloudSimTags.CONTAINER_SUBMIT, container);
     }
 
-    protected void submitRequestToList(ServerlessRequest request) {
+
+    private void removeFromVmTaskMap(ServerlessRequest task, ServerlessInvoker vm) {
+
+        int count = vm.getVmTaskMap().get(task.getRequestFunctionId());
+        vm.getVmTaskMap().put(task.getRequestFunctionId(), count - 1);
+        if (count == 1) {
+            functionVmMap.get(task.getRequestFunctionId()).remove(vm);
+            if (functionVmMap.get(task.getRequestFunctionId()) == null) {
+                functionVmMap.remove(task.getRequestFunctionId());
+            }
+        }
+    }
+
+    private void removeFromVmTaskExecutionMap(ServerlessRequest task, ServerlessInvoker vm) {
+
+        vm.getVmTaskExecutionMap().get(task.getRequestFunctionId()).remove(task);
+        vm.getVmTaskExecutionMapFull().get(task.getRequestFunctionId()).remove(task);
+    }
+
+    private void addToCloudlets(ServerlessRequest request) {
         getCloudletList().add(request);
     }
 
-    protected void removeFromInvokerRequestExecutionMap(ServerlessRequest request, ServerlessInvoker invoker) {
-        invoker.getRequestExecutionMap().get(request.getFunctionId()).remove(request);
-        invoker.getRequestExecutionMapFull().get(request.getFunctionId()).remove(request);
-    }
-
     /**
-     * Public functionalities
+     * Report generation functionalities
      */
 
-    public double getAverageResourceUtilization() {
-        return MathUtil.mean(meanAverageInvokersUsageRecords);
+    public double getAverageResourceUtilization(){
+
+        double sumAverage=0;
+
+        for (Double meanAverageVmUsageRecord : meanAverageVmUsageRecords) {
+            sumAverage += meanAverageVmUsageRecord;
+        }
+        return (sumAverage / meanAverageVmUsageRecords.size());
     }
 
-    public double getAverageInvokersCount() {
-        return MathUtil.mean(meanSumOfInvokersCounts);
+    public double getAverageVmCount (){
+        return MathUtil.mean(meanSumOfVmCount);
     }
 }

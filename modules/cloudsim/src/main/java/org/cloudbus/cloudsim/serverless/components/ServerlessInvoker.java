@@ -3,6 +3,7 @@ package org.cloudbus.cloudsim.serverless.components;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.cloudbus.cloudsim.Log;
 import org.cloudbus.cloudsim.container.containerProvisioners.ContainerBwProvisioner;
 import org.cloudbus.cloudsim.container.containerProvisioners.ContainerPe;
 import org.cloudbus.cloudsim.container.containerProvisioners.ContainerRamProvisioner;
@@ -13,10 +14,7 @@ import org.cloudbus.cloudsim.core.CloudSim;
 import org.cloudbus.cloudsim.serverless.enums.InvokerStatus;
 import org.cloudbus.cloudsim.serverless.utils.Constants;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * VM class for CloudSimSC extension.
@@ -24,234 +22,239 @@ import java.util.Map;
  * @author Anupama Mampage
  * @author Farbod Nazari
  */
-
-@Getter
-@Setter
 @Slf4j
 public class ServerlessInvoker extends PowerContainerVm {
 
-    public double onTime = 0;
-    public double offTime = 0;
+    @Getter
+    private final Map<String, ArrayList<Container>> functionContainerMap = new HashMap<>();
 
-    private double recordTime = 0;
-    private boolean isUsed;
+    @Getter
+    private final Map<String, ArrayList<Container>> functionContainerMapPending = new HashMap<>();
+
+    @Getter
+    private final Map<String, Integer> vmTaskMap = new HashMap<>();
+
+    @Getter
+    private final ArrayList<ServerlessRequest> runningRequestList = new ArrayList<>();
+
+    @Getter
+    private final Map<String, ArrayList<ServerlessRequest>> vmTaskExecutionMap = new HashMap<>();
+
+    @Getter
+    private final Map<String, ArrayList<ServerlessRequest>> vmTaskExecutionMapFull = new HashMap<>();
+
+    @Getter
+    @Setter
     private InvokerStatus status = null;
 
-    private List<ServerlessRequest> runningRequestsList = new ArrayList<>();
-    private Map<String, Integer> functionsMap = new HashMap<>();
-    private Map<String, List<ServerlessContainer>> pendingFunctionContainerMap = new HashMap<>();
-    private Map<String, List<ServerlessContainer>> functionContainersMap = new HashMap<>();
-    private Map<String, List<ServerlessRequest>> requestExecutionMap = new HashMap<>();
-    private Map<String, List<ServerlessRequest>> requestExecutionMapFull = new HashMap<>();
-    private Map<String, Integer> requestMap = new HashMap<>();
+    @Getter
+    @Setter
+    private double recordTime = 0;
+
+    public double onTime = 0;
+
+    public double offTime = 0;
+
+    public boolean used = false;
+
+    private final CongestionTracker congestionTracker;
 
     public ServerlessInvoker(int id, int userId, double mips, float ram, long bw, long size, String vmm, ContainerScheduler containerScheduler, ContainerRamProvisioner containerRamProvisioner, ContainerBwProvisioner containerBwProvisioner, List<? extends ContainerPe> peList, double schedulingInterval) {
         super(id, userId, mips, ram, bw, size, vmm, containerScheduler, containerRamProvisioner, containerBwProvisioner, peList, schedulingInterval);
+        congestionTracker = new CongestionTracker();
     }
 
     /**
-     * Overrides
+     * Public functionalities
      */
 
-    @Override
-    public boolean containerCreate(Container container) {
+    public void addToFunctionContainerMap(Container container, String functionId) {
 
-        if (getSize() < container.getSize()) {
-            log.warn("{}: {}: Allocation of container: {} failed because of storage.",
-                    CloudSim.clock(), getName(), container.getId());
-            return false;
-        } else if (!getContainerRamProvisioner().allocateRamForContainer(container, container.getCurrentRequestedRam())) {
-            log.warn("{}: {}: Allocation of container: {} failed because of ram.",
-                    CloudSim.clock(), getName(), container.getId());
-            return false;
-        } else if (!getContainerBwProvisioner().allocateBwForContainer(container, container.getCurrentRequestedBw())) {
-            log.warn("{}: {}: Allocation of container: {} failed because of BW.",
-                    CloudSim.clock(), getName(), container.getId());
-            getContainerRamProvisioner().deallocateRamForContainer(container);
-            return false;
-        } else if (!getContainerScheduler().allocatePesForContainer(container, container.getCurrentRequestedMips())) {
-            log.warn("{}: {}: Allocation of container: {} failed because of MIPS.",
-                    CloudSim.clock(), getName(), container.getId());
-            getContainerRamProvisioner().deallocateRamForContainer(container);
-            getContainerBwProvisioner().deallocateBwForContainer(container);
-            return false;
-        } else {
-
-            log.info("{}: {}: New container scheduled on invoker: {}: now available mips is: {}",
-                    CloudSim.clock(), this.getName(), this.getId(), getAvailableMips());
-
-            setSize(getSize() - container.getSize());
-            getContainerList().add(container);
-            container.setVm(this);
-            return true;
+        if (!functionContainerMap.computeIfAbsent(functionId, k -> new ArrayList<>()).contains(container)) {
+            functionContainerMap.get(functionId).add(container);
         }
+    }
+
+    public void addToFunctionContainerMapPending(Container container, String functionId) {
+
+        if (!functionContainerMapPending.computeIfAbsent(functionId, k -> new ArrayList<>()).contains(container)) {
+            functionContainerMapPending.get(functionId).add(container);
+        }
+    }
+
+
+    /**
+     * Scheduler functionalities
+     */
+
+    public boolean isSuitableForContainer(Container container, ServerlessInvoker vm) {
+
+        return (((ServerlessContainerScheduler) getContainerScheduler()).isSuitableForContainer(container, vm)
+                && getContainerRamProvisioner().isSuitableForContainer(container, container.getCurrentRequestedRam())
+                && getContainerBwProvisioner().isSuitableForContainer(container, container.getCurrentRequestedBw()));
+    }
+
+    public void addToVmTaskExecutionMap(ServerlessRequest task) {
+
+        vmTaskExecutionMapFull.computeIfAbsent(task.getRequestFunctionId(), k -> new ArrayList<>()).add(task);
+
+        int count = vmTaskExecutionMap.computeIfAbsent(task.getRequestFunctionId(), k -> new ArrayList<>()).size();
+        vmTaskExecutionMap.get(task.getRequestFunctionId()).add(task);
+
+        if (count == Constants.WINDOW_SIZE) {
+            vmTaskExecutionMap.get(task.getRequestFunctionId()).remove(0);
+        }
+    }
+
+    public void recordOffload() {
+        congestionTracker.update(true, runningRequestList.isEmpty());
+    }
+
+    public double getCongestionFactor() {
+        return congestionTracker.getCongestionFactor();
     }
 
     @Override
     public void containerDestroy(Container container) {
-
         if (container != null) {
             containerDeallocate(container);
             getContainerList().remove(container);
 
             List<String> functionsToRemove = new ArrayList<>();
-            getFunctionContainersMap().forEach((key, value) -> {
-                for (int i = 0; i < value.size(); i++) {
-                    if (value.get(i) == container) {
-                        value.remove(i);
-                        if (value.isEmpty()) {
-                            functionsToRemove.add(key);
+
+            for (Map.Entry<String, ArrayList<Container>> entry : functionContainerMap.entrySet()) {
+                for (int i = 0; i < entry.getValue().size(); i++) {
+                    if (entry.getValue().get(i) == container) {
+                        entry.getValue().remove(i);
+                        if (entry.getValue().isEmpty()) {
+                            functionsToRemove.add(entry.getKey());
                         }
                         break;
                     }
                 }
-            });
+            }
+            for (String s : functionsToRemove) {
+                functionContainerMap.remove(s);
+            }
+            functionContainerMap.values().removeIf(Objects::isNull);
+            log.info("{}: {}: Container: {} is deleted from the list of VM: {}",
+                    CloudSim.clock(), this.getClass().getSimpleName(), container.getId(), getId());
 
-            functionsToRemove.forEach(function -> functionContainersMap.remove(function));
-            functionContainersMap.forEach((key, value) -> {
-                functionContainersMap.get(key).remove(null);
-            });
-
-            log.info("{}: {}: Container: {} destroyed.", CloudSim.clock(), getName(), container.getId());
+            while (getContainerList().contains(container)) {
+                log.warn("{}: {}: Stuck waiting for container: {} to get removed from VM: {}",
+                        CloudSim.clock(), this.getClass().getSimpleName(), container.getId(), getId());
+            }
+            log.info("{}: {}: Container: {} was successfully removed from the VM: {}",
+                    CloudSim.clock(), this.getClass().getSimpleName(), container.getId(), getId());
         }
     }
 
+
+    @SuppressWarnings("DuplicatedCode")
     @Override
     public double updateVmProcessing(double currentTime, List<Double> mipsShare) {
 
-        double longestRunTime = 0;
+        double longestRunTimeVm;
+
         double returnTime;
-
+        longestRunTimeVm = 0;
         if (mipsShare != null && !getContainerList().isEmpty()) {
-            double smallerTime = Double.MAX_VALUE;
 
-            for (Container c: getContainerList()) {
-                ServerlessContainer container = (ServerlessContainer) c;
-                double time = container.updateContainerProcessing(
-                        currentTime,
-                        getContainerScheduler().getAllocatedMipsForContainer(container),
-                        this
+            double smallerTime = Double.MAX_VALUE;
+            for (Container container : getContainerList()) {
+                double time = ((ServerlessContainer) container).updateContainerProcessing(
+                        currentTime, getContainerScheduler().getAllocatedMipsForContainer(container), this
                 );
-                if (time > 0D && time < smallerTime) {
+
+                if ((time == 0 || time == Double.MAX_VALUE) && !Constants.FUNCTION_AUTOSCALING) {
+                    if (!((ServerlessContainer) container).newContainer && !((ServerlessContainer) container).isIdling()) {
+                        ((ServerlessDatacenter) (this.getHost().getDatacenter())).getContainersToDestroy().add(container);
+                        if (Constants.CONTAINER_IDLING_ENABLED) {
+                            ((ServerlessContainer) container).setIdleStartTime(CloudSim.clock());
+                            ((ServerlessContainer) container).setIdling(true);
+                        }
+                    }
+                }
+
+                if (time > 0.0 && time < smallerTime) {
                     smallerTime = time;
                 }
-                ServerlessRequestScheduler requestScheduler = ((ServerlessRequestScheduler) container.getContainerCloudletScheduler());
-                if (requestScheduler.getLongestContainerRunTime() > longestRunTime) {
-                    longestRunTime = requestScheduler.getLongestContainerRunTime();
+
+                double longestTime = ((ServerlessRequestScheduler) container.getContainerCloudletScheduler()).getLongestRunTime();
+                if (longestTime > longestRunTimeVm) {
+                    longestRunTimeVm = longestTime;
                 }
             }
+            ServerlessDatacenter.getRunTimeVm().put(this.getId(), longestRunTimeVm);
 
-            ServerlessDatacenter.invokerRunTimes.put(this.getId(), longestRunTime);
             returnTime = smallerTime;
         } else {
-            returnTime = 0D;
+            returnTime = 0.0;
         }
 
         if (currentTime > getPreviousTime() && (currentTime - 0.2) % getSchedulingInterval() == 0) {
             double utilization = 0;
+
             for (Container container : getContainerList()) {
-                if(!getContainersMigratingIn().contains(container)) {
+                // The containers which are going to migrate to the vm shouldn't be added to the utilization
+                if (!getContainersMigratingIn().contains(container)) {
                     returnTime = container.getContainerCloudletScheduler().getPreviousTime();
                     utilization += container.getTotalUtilizationOfCpu(returnTime);
                 }
             }
+
             if (CloudSim.clock() != 0 || utilization != 0) {
                 addUtilizationHistoryValue(utilization);
             }
             setPreviousTime(currentTime);
         }
 
+        if (CloudSim.clock() >= congestionTracker.getPreviousTime() + Constants.DECAY_HALF_LIFE) {
+            congestionTracker.update(false, runningRequestList.isEmpty());
+        }
         return returnTime;
     }
 
-    /**
-     * Controller functionalities
-     */
+    public boolean reallocateResourcesForContainer(Container container, int cpuChange, int memChange) {
 
-    public void addToPendingFunctionContainerMap(ServerlessContainer container, String functionId) {
-        addToFunctionMap(container, functionId, pendingFunctionContainerMap);
-    }
-
-    public void addToFunctionContainerMap(ServerlessContainer container, String functionId) {
-        addToFunctionMap(container, functionId, functionContainersMap);
-    }
-
-    /**
-     * Scheduler functionalities
-     */
-
-    // TODO: To be changed.
-    public boolean isSuitableForContainer(ServerlessContainer container, ServerlessInvoker invoker) {
-        return ((ServerlessContainerScheduler) getContainerScheduler()).isSuitableForContainer(container, invoker)
-                && getContainerRamProvisioner().isSuitableForContainer(container, container.getCurrentRequestedRam())
-                && getContainerBwProvisioner().isSuitableForContainer(container, container.getCurrentRequestedBw());
-    }
-
-    public void addToRequestExecutionMap(ServerlessRequest request) {
-
-        String functionId = request.getFunctionId();
-        addToRequestExecutionMap(request, functionId, requestExecutionMapFull);
-        if (addToRequestExecutionMap(request, functionId, requestExecutionMap) == Constants.WINDOW_SIZE) {
-            requestExecutionMap.get(functionId).remove(0);
-        }
-    }
-
-    public boolean reallocateResourcesForContainer(ServerlessContainer container, int cpuChange, int memChange) {
+        log.info("{}: {}: Container: {} original values: [ MIPS: {}, RAM: {} ]",
+                CloudSim.clock(), this.getClass().getSimpleName(), container.getId(), container.getMips(), container.getRam());
 
         float newRam = container.getRam() + memChange;
-        double newMips = container.getMips() + cpuChange;
+        double newMIPS = container.getMips() + cpuChange;
+        log.info("{}: {}: Container: {} requested additional RAM: {}; available VM RAM: {}",
+                CloudSim.clock(), this.getClass().getSimpleName(), container.getId(), memChange, getContainerRamProvisioner().getAvailableVmRam());
+        log.info("{}: {}: Container: {} requested additional MIPS: {}; available VM MIPS: {}",
+                CloudSim.clock(), this.getClass().getSimpleName(), container.getId(), cpuChange * container.getNumberOfPes(), getAvailableMips());
 
-        if (this.getMips() < newMips) {
+        if (container.getMips() + cpuChange > this.getMips()) {
             return false;
         } else {
-            if (getContainerRamProvisioner().getAvailableVmRam() < memChange) {
+            if (!(getContainerRamProvisioner().getAvailableVmRam() >= memChange)) {
+                log.info("{}: {}: VM RAM not enough to reallocate for container: {}",
+                        CloudSim.clock(), this.getClass().getSimpleName(), container.getId());
                 return false;
-            } else if (this.getAvailableMips() < cpuChange * container.getNumberOfPes()) {
+            } else if (!(getAvailableMips() >= cpuChange * container.getNumberOfPes())) {
+                log.info("{}: {}: VM MIPS not enough to reallocate for container: {}",
+                        CloudSim.clock(), this.getClass().getSimpleName(), container.getId());
                 return false;
             } else if (!getContainerRamProvisioner().allocateRamForContainer(container, newRam)) {
+                log.info("{}: {}: VM RAM reallocation failed for container: {}",
+                        CloudSim.clock(), this.getClass().getSimpleName(), container.getId());
                 return false;
-            } else if (!((ServerlessContainerScheduler) getContainerScheduler()).reAllocatePesForContainer(container, newMips)) {
+            } else if (!((ServerlessContainerScheduler) getContainerScheduler()).reAllocatePesForContainer(container, newMIPS)) {
+                log.info("{}: {}: VM MIPS reallocation failed for container: {}",
+                        CloudSim.clock(), this.getClass().getSimpleName(), container.getId());
                 return false;
             }
+
+            container.setRam(Math.round(newRam));
+            ((ServerlessRequestScheduler) container.getContainerCloudletScheduler()).setTotalMips(newMIPS);
+            log.info("{}: {}: Available VM: {} resources: [ MIPS: {}. RAM: {} ]",
+                    CloudSim.clock(), this.getClass().getSimpleName(), getId(), getAvailableMips(), getContainerRamProvisioner().getAvailableVmRam());
+            log.info("{}: {}: Container: {} reallocated values: [ MIPS: {}, RAM: {} ]",
+                    CloudSim.clock(), this.getClass().getSimpleName(), container.getId(), container.getMips(), container.getRam());
+            return true;
         }
-
-        container.setRam(Math.round(newRam));
-        ((ServerlessRequestScheduler) container.getContainerCloudletScheduler()).setTotalMips(newMips);
-        return true;
-    }
-
-    /**
-     * Local functionalities
-     */
-
-    private void addToFunctionMap(ServerlessContainer container, String functionId, Map<String, List<ServerlessContainer>> containersMap) {
-
-        if (!containersMap.containsKey(functionId)) {
-            List<ServerlessContainer> containerList = new ArrayList<>();
-            containerList.add(container);
-            containersMap.put(functionId, containerList);
-        } else {
-            if (!containersMap.get(functionId).contains(container)) {
-                containersMap.get(functionId).add(container);
-            }
-        }
-    }
-
-    private int addToRequestExecutionMap(ServerlessRequest request, String functionId, Map<String, List<ServerlessRequest>> requestExecutionMap) {
-
-        int count = requestExecutionMap.containsKey(functionId) ? requestExecutionMap.get(functionId).size() : 0;
-        if (count == 0) {
-            List<ServerlessRequest> requestList = new ArrayList<>();
-            requestList.add(request);
-            requestExecutionMap.put(functionId, requestList);
-        } else {
-            requestExecutionMap.get(functionId).add(request);
-        }
-
-        return count;
-    }
-
-    private String getName() {
-        return "invoker#" + getId();
     }
 }

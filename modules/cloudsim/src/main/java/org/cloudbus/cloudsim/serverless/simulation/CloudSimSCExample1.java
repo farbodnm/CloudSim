@@ -1,4 +1,4 @@
-package org.cloudbus.cloudsim.serverless.simulations;/*
+package org.cloudbus.cloudsim.serverless.simulation;/*
  * Title:        CloudSimSC Toolkit
  * Description:  CloudSimSC Toolkit for Modeling and Simulation
  *               of Serverless Clouds
@@ -33,19 +33,14 @@ import org.cloudbus.cloudsim.container.utils.IDs;
 import org.cloudbus.cloudsim.container.vmSelectionPolicies.PowerContainerVmSelectionPolicy;
 import org.cloudbus.cloudsim.container.vmSelectionPolicies.PowerContainerVmSelectionPolicyMaximumUsage;
 import org.cloudbus.cloudsim.core.CloudSim;
-import org.cloudbus.cloudsim.serverless.components.loadbalance.DefaultRequestLoadBalancer;
+import org.cloudbus.cloudsim.serverless.components.*;
 import org.cloudbus.cloudsim.serverless.components.loadbalance.RequestLoadBalancer;
-import org.cloudbus.cloudsim.serverless.components.ServerlessContainer;
-import org.cloudbus.cloudsim.serverless.components.ServerlessDatacenter;
-import org.cloudbus.cloudsim.serverless.components.ServerlessInvoker;
-import org.cloudbus.cloudsim.serverless.components.ServerlessContainerRamProvisioner;
-import org.cloudbus.cloudsim.serverless.components.UtilizationModelPartial;
-import org.cloudbus.cloudsim.serverless.components.autoscale.DefaultFunctionAutoScaler;
-import org.cloudbus.cloudsim.serverless.components.schedule.DefaultFunctionScheduler;
+import org.cloudbus.cloudsim.serverless.components.loadbalance.RequestLoadBalancerFirstFit;
 import org.cloudbus.cloudsim.serverless.components.schedule.FunctionScheduler;
-import org.cloudbus.cloudsim.serverless.components.ServerlessContainerScheduler;
-import org.cloudbus.cloudsim.serverless.components.ServerlessController;
-import org.cloudbus.cloudsim.serverless.components.ServerlessRequest;
+import org.cloudbus.cloudsim.serverless.components.schedule.FunctionSchedulerConstBased;
+import org.cloudbus.cloudsim.serverless.components.schedule.FunctionSchedulerHABIT;
+import org.cloudbus.cloudsim.serverless.components.schedule.FunctionSchedulerProvider;
+import org.cloudbus.cloudsim.serverless.enums.AutoScalerType;
 import org.cloudbus.cloudsim.serverless.utils.Constants;
 
 /**
@@ -106,7 +101,6 @@ public class CloudSimSCExample1 {
 
         Log.printLine("Starting CloudSimSCExample1...");
 
-
         try {
             // First step: Initialize the CloudSim package. It should be called
             // before creating any entities.
@@ -131,7 +125,7 @@ public class CloudSimSCExample1 {
             controller.submitVmList(vmList);
 
             //Fifth step: Create a load balancer
-            loadBalancer = new DefaultRequestLoadBalancer(controller, DC);
+            loadBalancer = new RequestLoadBalancerFirstFit(controller);
             controller.setLoadBalancer(loadBalancer);
             controller.setDatacenter(DC);
 
@@ -151,7 +145,7 @@ public class CloudSimSCExample1 {
 
 //          Printing the results when the simulation is finished.
             List<ContainerCloudlet> finishedRequests = controller.getCloudletReceivedList();
-            List<ServerlessContainer> destroyedContainers = controller.getContainerDestroyedList();
+            List<ServerlessContainer> destroyedContainers = (List<ServerlessContainer>) controller.getContainerDestroyedList();
             printRequestList(finishedRequests);
             printContainerList(destroyedContainers);
             if (Constants.MONITORING){
@@ -177,7 +171,7 @@ public class CloudSimSCExample1 {
         BufferedReader br = new BufferedReader(new FileReader(Constants.FUNCTION_REQUESTS_FILENAME));
         String line = null;
         String cvsSplitBy = ",";
-//        controller.noOfTasks++;
+        controller.noOfTasks++;
 
 //        Serverless requests could utilize part of a vCPU core in case container concurrency is enabled
         UtilizationModelPartial utilizationModelPar = new UtilizationModelPartial();
@@ -198,7 +192,7 @@ public class CloudSimSCExample1 {
 
             request.setUserId(controller.getId());
             System.out.println(CloudSim.clock() + " request created. This request arrival time is :" + Double.parseDouble(data[0]));
-            controller.getRequestArrivalTimes().add(Double.parseDouble(data[0]) + Constants.FUNCTION_SCHEDULING_DELAY);
+            controller.requestArrivalTime.add(Double.parseDouble(data[0]) + Constants.FUNCTION_SCHEDULING_DELAY);
 //            requestList.add(request);
             controller.requestQueue.add(request);
             createdRequests += 1;
@@ -265,7 +259,7 @@ public class CloudSimSCExample1 {
                 PCVmAllocationPolicyMigrationAbstractHostSelection(hostList, vmSelectionPolicy,
                 hostSelectionPolicy, Constants.OVER_UTILIZATION_THRESHOLD, Constants.UNDER_UTILIZATION_THRESHOLD);
         //      Allocating vms to container
-        FunctionScheduler containerAllocationPolicy = new DefaultFunctionScheduler();
+        FunctionScheduler containerAllocationPolicy = FunctionSchedulerProvider.getScheduler();
 
         ContainerDatacenterCharacteristics characteristics = new
                 ContainerDatacenterCharacteristics(arch, os, vmm, hostList, time_zone, cost, costPerMem, costPerStorage,
@@ -273,7 +267,7 @@ public class CloudSimSCExample1 {
         /** Set datacenter monitoring to true if metrics monitoring is required **/
         ServerlessDatacenter datacenter = new ServerlessDatacenter(name, characteristics, vmAllocationPolicy,
                 containerAllocationPolicy, new LinkedList<Storage>(), Constants.SCHEDULING_INTERVAL, getExperimentName("SimTest1", String.valueOf(80)), logAddress,
-                Constants.VM_STARTTUP_DELAY, Constants.CONTAINER_STARTUP_DELAY, true, new DefaultFunctionAutoScaler());
+                Constants.VM_STARTTUP_DELAY, Constants.CONTAINER_STARTUP_DELAY, Constants.MONITORING, AutoScalerType.CONST_BASED);
 
         return datacenter;
     }
@@ -335,7 +329,7 @@ public class CloudSimSCExample1 {
             Log.printLine(indent + (container.getVm()).getId() + indent + indent + (dft.format(container.getStartTime()))
                     + indent + indent + indent +indent +  dft.format(container.getFinishTime())
                     + indent + indent+ indent+ indent
-                    +  container.getFinishedRequests());
+                    +  container.getFinishedTasks());
 
 
         }
@@ -369,12 +363,12 @@ public class CloudSimSCExample1 {
         for (int i = 0; i < size; i++) {
             request = list.get(i);
             Log.print(indent + request.getCloudletId() + indent + indent);
-            Log.print(indent + ((ServerlessRequest)request).getFunctionId() + indent + indent);
+            Log.print(indent + ((ServerlessRequest)request).getRequestFunctionId() + indent + indent);
             Log.print(indent + ((ServerlessRequest)request).getContainerId() + indent + indent);
             totalRequests += 1;
 
-            if (request.getCloudletStatusString() == "Success") {
-                totalResponseTime += request.getFinishTime()-((ServerlessRequest)request).getArrivalTime();
+            if (Objects.equals(request.getCloudletStatusString(), "Success")) {
+                totalResponseTime += (int) (request.getFinishTime()-((ServerlessRequest)request).getArrivalTime());
                 Log.print("SUCCESS");
                 if (Math.ceil((request.getFinishTime() - ((ServerlessRequest) request).getArrivalTime())) <= (Math.ceil(((ServerlessRequest) request).getMaxExecTime())) || Math.floor((request.getFinishTime() - ((ServerlessRequest) request).getArrivalTime())) <= (Math.ceil(((ServerlessRequest) request).getMaxExecTime()))) {
                     deadlineMetStat++;
@@ -415,7 +409,7 @@ public class CloudSimSCExample1 {
             else if(vm.getStatus().equals("ON")){
                 vm.onTime += 2500.00-vm.getRecordTime();
             }
-            System.out.println("Vm # "+controller.getVmsCreatedList().get(x).getId()+" used: " + vm.isUsed() );
+            System.out.println("Vm # "+controller.getVmsCreatedList().get(x).getId()+" used: "+vm.used );
             System.out.println("Vm # "+controller.getVmsCreatedList().get(x).getId()+"has uptime of: "+vm.onTime);
             System.out.println("Vm # "+controller.getVmsCreatedList().get(x).getId()+"has downtime of: "+vm.offTime);
             totalVmUpTime +=vm.onTime;
@@ -424,7 +418,9 @@ public class CloudSimSCExample1 {
 
     private static void printVmUtilization(){
         System.out.println("Average CPU utilization of vms: "+ controller.getAverageResourceUtilization());
-        System.out.println("Average vm count: "+ controller.getAverageInvokersCount());
+        System.out.println("Average vm count: "+ controller.getAverageVmCount());
+        System.out.println("Using exsiting cont: "+ controller.existingContainerCount);
+
     }
 
     private static void writeDataLineByLine(List<ContainerCloudlet> list) throws ParameterException {
@@ -434,12 +430,13 @@ public class CloudSimSCExample1 {
         int successfulRequestCount = 0;
         int droppedRequestCount = 0;
         double totalResponseTime = 0;
+        double totalTimeInTransit = 0;
         float failedRequestRatio = 0;
         float averageResponseTime = 0;
         Cloudlet request;
         String indent = "    ";
 //        java.io.File file = new java.io.File("D:\\OneDrive - The University of Melbourne\\UniMelb\\Studying\\Serverless simulator\\Data\\Result.csv");
-        java.io.File file = new java.io.File("Result.csv");
+        java.io.File file = new java.io.File("Result" + System.currentTimeMillis() + ".csv");
 
 
         try {
@@ -458,13 +455,14 @@ public class CloudSimSCExample1 {
 
                 if (request.getCloudletStatusString().equals("Success")) {
                     totalResponseTime += (request.getFinishTime() - ((ServerlessRequest) request).getArrivalTime());
+                    totalTimeInTransit +=  request.getExecStartTime() - ((ServerlessRequest) request).getArrivalTime();
                     successfulRequestCount++;
-                    String[] data = {String.valueOf(request.getCloudletId()), String.valueOf(((ServerlessRequest)request).getFunctionId()), "SUCCESS",  String.valueOf(((ServerlessRequest)request).getContainerId()), String.valueOf(request.getResourceId()), String.valueOf(request.getVmId()), String.valueOf(request.getActualCPUTime()), String.valueOf(request.getExecStartTime()), String.valueOf(request.getFinishTime()), String.valueOf((request.getFinishTime() - ((ServerlessRequest) request).getArrivalTime())), ((ServerlessRequest) request).getResList()};
+                    String[] data = {String.valueOf(request.getCloudletId()), String.valueOf(((ServerlessRequest)request).getRequestFunctionId()), "SUCCESS",  String.valueOf(((ServerlessRequest)request).getContainerId()), String.valueOf(request.getResourceId()), String.valueOf(request.getVmId()), String.valueOf(request.getActualCPUTime()), String.valueOf(request.getExecStartTime()), String.valueOf(request.getFinishTime()), String.valueOf((request.getFinishTime() - ((ServerlessRequest) request).getArrivalTime())), ((ServerlessRequest) request).getResList()};
                     writer.writeNext(data);
 
                 } else {
                     droppedRequestCount++;
-                    String[] data = {String.valueOf(request.getCloudletId()), String.valueOf(((ServerlessRequest)request).getFunctionId()), "DROPPED", String.valueOf(request.getResourceId()), String.valueOf(request.getVmId()), String.valueOf(request.getActualCPUTime()), String.valueOf(request.getExecStartTime()), String.valueOf(request.getFinishTime()), String.valueOf((request.getFinishTime() - ((ServerlessRequest) request).getArrivalTime())), ((ServerlessRequest) request).getResList()};
+                    String[] data = {String.valueOf(request.getCloudletId()), String.valueOf(((ServerlessRequest)request).getRequestFunctionId()), "DROPPED", String.valueOf(request.getResourceId()), String.valueOf(request.getVmId()), String.valueOf(request.getActualCPUTime()), String.valueOf(request.getExecStartTime()), String.valueOf(request.getFinishTime()), String.valueOf((request.getFinishTime() - ((ServerlessRequest) request).getArrivalTime())), ((ServerlessRequest) request).getResList()};
                     writer.writeNext(data);
                 }
             }
@@ -478,20 +476,25 @@ public class CloudSimSCExample1 {
 
             String[] data1 = {"Average VM utilization  ", String.valueOf(controller.getAverageResourceUtilization())};
             writer.writeNext(data1);
-            String[] data2 = {"Average VM Count # ", String.valueOf(controller.getAverageInvokersCount())};
+            String[] data2 = {"Average VM Count # ", String.valueOf(controller.getAverageVmCount())};
             writer.writeNext(data2);
             String[] data3 = {"Successful Request Count # ", String.valueOf(successfulRequestCount)};
             writer.writeNext(data3);
             String[] data4 = {"Dropped Request Count # ", String.valueOf(droppedRequestCount)};
             writer.writeNext(data4);
-            totalResponseTime = totalResponseTime/successfulRequestCount;
-            String[] data5 = {"Average Request Response Time # ", String.valueOf(totalResponseTime)};
+            String[] data5 = {"Total request response time # ", String.valueOf(totalResponseTime)};
             writer.writeNext(data5);
-            failedRequestRatio = (float) droppedRequestCount /(successfulRequestCount + droppedRequestCount);
-            String[] data6 = {"Dropped Request Ratio # ", String.valueOf(failedRequestRatio)};
+            totalResponseTime = totalResponseTime/successfulRequestCount;
+            String[] data6 = {"Average Request Response Time # ", String.valueOf(totalResponseTime)};
             writer.writeNext(data6);
-
-
+            failedRequestRatio = (float) droppedRequestCount / (successfulRequestCount + droppedRequestCount);
+            String[] data7 = {"Dropped Request Ratio # ", String.valueOf(failedRequestRatio)};
+            writer.writeNext(data7);
+            String[] data8 = {"Total Time in transit # ", String.valueOf(totalTimeInTransit)};
+            writer.writeNext(data8);
+            totalTimeInTransit = totalTimeInTransit/successfulRequestCount;
+            String[] data9 = {"Average time in transit # ", String.valueOf(totalTimeInTransit)};
+            writer.writeNext(data9);
 
             // closing writer connection
             writer.close();

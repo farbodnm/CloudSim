@@ -115,14 +115,13 @@ public class Constants {
      */
 
     public static final int NUMBER_HOSTS = 5;
-    public static final int NUMBER_VMS = 20;
-    public static final int NUMBER_requestS = 5;
+    public static final int NUMBER_VMS = 15;
 
     /**
      * Name of the file containing function requests list.
      */
 
-    public static final String FUNCTION_REQUESTS_FILENAME = "/home/farbod/Projects/CloudSim/modules/cloudsim/src/main/java/org/cloudbus/cloudsim/serverless/simulations/Real_trace_test2_small.csv";
+    public static final String FUNCTION_REQUESTS_FILENAME = "/home/farbod/Downloads/CloudSimSC/modules/cloudsim/src/main/java/org/cloudbus/cloudsim/serverless/simulation/Real_trace_test2_more.csv";
 
     /**
      * Algorithm specific parameters
@@ -131,20 +130,23 @@ public class Constants {
     public static final double OVER_UTILIZATION_THRESHOLD = 0.80;
     public static final double UNDER_UTILIZATION_THRESHOLD = 0.70;
     public static final double CONTAINER_SCALE_CPU_THRESHOLD = 0.40;
-    public static final boolean CONTAINER_CONCURRENCY = false;
+    public static final boolean CONTAINER_CONCURRENCY = true;
     public static final boolean FUNCTION_AUTOSCALING = false;
     public static final boolean FUNCTION_HORIZONTAL_AUTOSCALING = false;
     public static final boolean FUNCTION_VERTICAL_AUTOSCALING = false;
-    public static final boolean SCALE_PER_REQUEST = true;
-    public static final InvokerSelectionAlgo INVOKER_SELECTION_ALGO = InvokerSelectionAlgo.BEST_FIT_FIRST;
+    public static final boolean SCALE_PER_REQUEST = false;
+    public static final InvokerSelectionAlgo INVOKER_SELECTION_ALGO = InvokerSelectionAlgo.HABIT;
     public static final HorizontalScalingLogic HOR_SCALING_LOGIC = HorizontalScalingLogic.CPU_THRESHOLD;
     public static final ScalingTriggerLogic SCALING_TRIGGER_LOGIC = ScalingTriggerLogic.CPU_THRESHOLD;
-    public static final ContainerSelectAlgo CONTAINER_SELECTION_ALGO = ContainerSelectAlgo.FIRST_FIT;
     public static final int MAX_RESCHEDULE_TRIES = 8;
     public static final boolean MONITORING = true;
     public static final int MAX_REPLICAS = 50;
     public static final boolean CONTAINER_IDLING_ENABLED = false;
-    public static final int CONTAINER_IDLING_TIME = 5;
+    public static final int CONTAINER_IDLING_TIME = 10;
+    public static final double SHORT_TERM_ALPHA = 1;
+    public static final double MEDIUM_TERM_ALPHA = 0.1;
+    public static final double HABIT_VM_RANGE_EXPONENT = 1;
+    public static final double DECAY_HALF_LIFE = 100;
     public static final double STARTUP_TIME = 0.111;
 
 }

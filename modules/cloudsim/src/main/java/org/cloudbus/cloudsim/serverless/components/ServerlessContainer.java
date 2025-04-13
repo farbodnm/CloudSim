@@ -12,64 +12,87 @@ import java.util.List;
  * Container class for CloudSimSC extension.
  *
  * @author Anupama Mampage
- * @author Farbod Nazari
+ * Created on 3/25/2023
  */
 
-@Getter
-@Setter
 public class ServerlessContainer extends Container {
 
-    public boolean newContainer;
+    /**
+     * The running task list for the container
+     */
+    @Getter
+    private final ArrayList<ServerlessRequest> runningTasks = new ArrayList<>();
 
-    private boolean firstProcess = false;
-    private double startTime;
-    private double idleStartTime;
-    private double finishTime = 0;
+    /**
+     * The running task list for the container
+     */
+    @Getter
+    private final ArrayList<ServerlessRequest> finishedTasks = new ArrayList<>();
+
+    /**
+     * Container type
+     */
+    @Getter
+    private final String functionType;
+
+    boolean newContainer;
+
+    @Setter
     private boolean reschedule;
-    private boolean idling;
-    private String functionType;
 
-    private List<ServerlessRequest> pendingRequests = new ArrayList<>();
-    private List<ServerlessRequest> runningRequests = new ArrayList<>();
-    private List<ServerlessRequest> finishedRequests = new ArrayList<>();
+    @Getter
+    @Setter
+    private boolean idling;
+
+    @Setter
+    @Getter
+    private double startTime = 0;
+
+    @Setter
+    @Getter
+    private double finishTime = 0;
+
+    @Setter
+    @Getter
+    private double idleStartTime = 0;
 
     public ServerlessContainer(
-            int id,
-            int controllerId,
-            String functionType,
-            double mips,
-            int numberOfPes,
-            int ram,
-            long bw,
-            long size,
-            String containerManager,
-            ContainerCloudletScheduler containerRequestScheduler,
-            double schedulingInterval
+        int id,
+        int userId,
+        String type,
+        double mips,
+        int numberOfPes,
+        int ram,
+        long bw,
+        long size,
+        String containerManager,
+        ContainerCloudletScheduler containerRequestScheduler,
+        double schedulingInterval,
+        boolean newCont,
+        boolean idling,
+        boolean reschedule,
+        double idleStartTime
     ) {
-        super(id, controllerId, mips, numberOfPes, ram, bw, size, containerManager, containerRequestScheduler, schedulingInterval);
-        this.functionType = functionType;
-        this.newContainer = true;
-        this.reschedule = false;
-        this.idling = false;
-        this.idleStartTime = 0;
+        super(id, userId, mips, numberOfPes, ram, bw, size, containerManager, containerRequestScheduler, schedulingInterval);
+        this.newContainer = newCont;
+        this.reschedule = reschedule;
+        this.idling = idling;
+        this.functionType = type;
+        this.idleStartTime = idleStartTime;
     }
 
-    public double updateContainerProcessing(double currentTime, List<Double> mipsShare, ServerlessInvoker invoker) {
+    public void addToRunningTasks(ServerlessRequest task) {
+        runningTasks.add(task);
+    }
+
+    public void addToFinishedTasks(ServerlessRequest task) {
+        finishedTasks.add(task);
+    }
+
+    public double updateContainerProcessing(double currentTime, List<Double> mipsShare, ServerlessInvoker vm) {
         if (mipsShare != null) {
-            return ((ServerlessRequestScheduler) getContainerCloudletScheduler()).updateContainerProcessing(currentTime, mipsShare, invoker);
+            return ((ServerlessRequestScheduler) getContainerCloudletScheduler()).updateContainerProcessing(currentTime, mipsShare,vm);
         }
-        return 0D;
-    }
-
-    public void addToRunningRequests(ServerlessRequest request) {
-        runningRequests.add(request);
-    }
-
-    public void removeFromRunningRequests(ServerlessRequest request) {
-        runningRequests.remove(request);
-    }
-
-    public void addToFinishedRequests(ServerlessRequest request) {
-        finishedRequests.add(request);
+        return 0.0;
     }
 }
