@@ -1,16 +1,13 @@
-package org.cloudbus.cloudsim.serverless.components.scheduling;
+package org.cloudbus.cloudsim.serverless.components.schedule;
 
-import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.cloudbus.cloudsim.container.core.Container;
 import org.cloudbus.cloudsim.container.core.ContainerVm;
 import org.cloudbus.cloudsim.container.resourceAllocators.PowerContainerAllocationPolicy;
 import org.cloudbus.cloudsim.core.CloudSim;
-import org.cloudbus.cloudsim.serverless.components.process.ServerlessContainer;
-import org.cloudbus.cloudsim.serverless.components.process.ServerlessInvoker;
+import org.cloudbus.cloudsim.serverless.components.ServerlessContainer;
+import org.cloudbus.cloudsim.serverless.components.ServerlessInvoker;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 

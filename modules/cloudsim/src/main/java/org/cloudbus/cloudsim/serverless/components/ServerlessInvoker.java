@@ -1,4 +1,4 @@
-package org.cloudbus.cloudsim.serverless.components.process;
+package org.cloudbus.cloudsim.serverless.components;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -10,9 +10,6 @@ import org.cloudbus.cloudsim.container.core.Container;
 import org.cloudbus.cloudsim.container.core.PowerContainerVm;
 import org.cloudbus.cloudsim.container.schedulers.ContainerScheduler;
 import org.cloudbus.cloudsim.core.CloudSim;
-import org.cloudbus.cloudsim.serverless.components.scheduling.ServerlessContainerScheduler;
-import org.cloudbus.cloudsim.serverless.components.scheduling.ServerlessRequestScheduler;
-import org.cloudbus.cloudsim.serverless.components.transfer.ServerlessRequest;
 import org.cloudbus.cloudsim.serverless.enums.InvokerStatus;
 import org.cloudbus.cloudsim.serverless.utils.Constants;
 
@@ -79,6 +76,10 @@ public class ServerlessInvoker extends PowerContainerVm {
             getContainerBwProvisioner().deallocateBwForContainer(container);
             return false;
         } else {
+
+            log.info("{}: {}: New container scheduled on invoker: {}: now available mips is: {}",
+                    CloudSim.clock(), this.getName(), this.getId(), getAvailableMips());
+
             setSize(getSize() - container.getSize());
             getContainerList().add(container);
             container.setVm(this);
@@ -180,8 +181,8 @@ public class ServerlessInvoker extends PowerContainerVm {
      */
 
     // TODO: To be changed.
-    public boolean isSuitableForContainer(ServerlessContainer container) {
-        return ((ServerlessContainerScheduler) getContainerScheduler()).isSuitableForContainer(container)
+    public boolean isSuitableForContainer(ServerlessContainer container, ServerlessInvoker invoker) {
+        return ((ServerlessContainerScheduler) getContainerScheduler()).isSuitableForContainer(container, invoker)
                 && getContainerRamProvisioner().isSuitableForContainer(container, container.getCurrentRequestedRam())
                 && getContainerBwProvisioner().isSuitableForContainer(container, container.getCurrentRequestedBw());
     }

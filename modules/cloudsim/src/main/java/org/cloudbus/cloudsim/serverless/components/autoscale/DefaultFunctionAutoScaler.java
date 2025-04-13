@@ -1,11 +1,11 @@
-package org.cloudbus.cloudsim.serverless.components.scaling;
+package org.cloudbus.cloudsim.serverless.components.autoscale;
 
 import org.cloudbus.cloudsim.container.core.ContainerHost;
 import org.cloudbus.cloudsim.container.core.ContainerVm;
-import org.cloudbus.cloudsim.serverless.components.process.ServerlessContainer;
-import org.cloudbus.cloudsim.serverless.components.process.ServerlessDatacenter;
-import org.cloudbus.cloudsim.serverless.components.process.ServerlessInvoker;
-import org.cloudbus.cloudsim.serverless.components.scheduling.ServerlessRequestScheduler;
+import org.cloudbus.cloudsim.serverless.components.ServerlessContainer;
+import org.cloudbus.cloudsim.serverless.components.ServerlessDatacenter;
+import org.cloudbus.cloudsim.serverless.components.ServerlessInvoker;
+import org.cloudbus.cloudsim.serverless.components.ServerlessRequestScheduler;
 import org.cloudbus.cloudsim.serverless.utils.Constants;
 
 import java.util.*;
@@ -18,6 +18,10 @@ import java.util.*;
  * @author Farbod Nazari
  */
 public class DefaultFunctionAutoScaler extends FunctionAutoScaler {
+
+    public DefaultFunctionAutoScaler() {
+        super();
+    }
 
     public DefaultFunctionAutoScaler(ServerlessDatacenter datacenter) {
         super(datacenter);

@@ -1,9 +1,9 @@
-package org.cloudbus.cloudsim.serverless.components.scheduling;
+package org.cloudbus.cloudsim.serverless.components;
 
+import lombok.extern.slf4j.Slf4j;
 import org.cloudbus.cloudsim.container.containerProvisioners.ContainerPe;
 import org.cloudbus.cloudsim.container.schedulers.ContainerSchedulerTimeSharedOverSubscription;
-import org.cloudbus.cloudsim.serverless.components.process.ServerlessContainer;
-import org.cloudbus.cloudsim.serverless.components.process.ServerlessInvoker;
+import org.cloudbus.cloudsim.core.CloudSim;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,6 +15,7 @@ import java.util.List;
  * @author Farbod Nazari
  */
 
+@Slf4j
 public class ServerlessContainerScheduler extends ContainerSchedulerTimeSharedOverSubscription {
 
     public ServerlessContainerScheduler(List<? extends ContainerPe> pelist) {
@@ -25,10 +26,13 @@ public class ServerlessContainerScheduler extends ContainerSchedulerTimeSharedOv
      * Invoker functionalities
      */
 
-    public boolean isSuitableForContainer(ServerlessContainer container) {
+    public boolean isSuitableForContainer(ServerlessContainer container, ServerlessInvoker invoker) {
 
         int assignedPes = 0;
         for (ContainerPe pe: getPeList()) {
+            log.info("{}: {}: Available pe mips in invoker: {} is: {}, needed mips for container: {} is: {}",
+                    CloudSim.clock(), this.getClass().getSimpleName(), invoker.getId(), pe.getContainerPeProvisioner().getAvailableMips(),
+                    container.getId(), container.getMips());
             if (container.getMips() < pe.getContainerPeProvisioner().getAvailableMips()) {
                 assignedPes++;
                 if (assignedPes == container.getNumberOfPes()) {

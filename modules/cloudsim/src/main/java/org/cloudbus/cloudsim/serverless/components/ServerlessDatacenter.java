@@ -1,4 +1,4 @@
-package org.cloudbus.cloudsim.serverless.components.process;
+package org.cloudbus.cloudsim.serverless.components;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -10,10 +10,8 @@ import org.cloudbus.cloudsim.container.resourceAllocators.ContainerAllocationPol
 import org.cloudbus.cloudsim.container.resourceAllocators.ContainerVmAllocationPolicy;
 import org.cloudbus.cloudsim.core.CloudSim;
 import org.cloudbus.cloudsim.core.SimEvent;
-import org.cloudbus.cloudsim.serverless.components.scaling.FunctionAutoScaler;
-import org.cloudbus.cloudsim.serverless.components.scheduling.FunctionScheduler;
-import org.cloudbus.cloudsim.serverless.components.scheduling.ServerlessRequestScheduler;
-import org.cloudbus.cloudsim.serverless.components.transfer.ServerlessRequest;
+import org.cloudbus.cloudsim.serverless.components.autoscale.FunctionAutoScaler;
+import org.cloudbus.cloudsim.serverless.components.schedule.FunctionScheduler;
 import org.cloudbus.cloudsim.serverless.enums.InvokerStatus;
 import org.cloudbus.cloudsim.serverless.utils.CloudSimSCTags;
 import org.cloudbus.cloudsim.serverless.utils.Constants;
@@ -39,7 +37,7 @@ public class ServerlessDatacenter extends PowerContainerDatacenterCM {
     private List<Container> containersToDestroy = new ArrayList<>();
     private FunctionAutoScaler autoScaler;
 
-    private boolean isMonitored = false;
+    private boolean isMonitored;
     private boolean isAutoScalingInitialized = false;
 
     public ServerlessDatacenter(
@@ -58,6 +56,7 @@ public class ServerlessDatacenter extends PowerContainerDatacenterCM {
     ) throws Exception {
         super(name, characteristics, vmAllocationPolicy, containerAllocationPolicy, storageList, schedulingInterval, experimentName, logAddress, vmStartupDelay, containerStartupDelay);
         this.isMonitored = isMonitored;
+        functionAutoScaler.setDatacenter(this);
         this.autoScaler = functionAutoScaler;
     }
 
@@ -172,7 +171,9 @@ public class ServerlessDatacenter extends PowerContainerDatacenterCM {
     }
 
     private void processAutoScaling(SimEvent ev) {
-        throw new UnsupportedOperationException("Processing auto scale events not implemented.");
+        autoScaler.scaleFunctions();
+        destroyIdleContainers();
+        send(this.getId(), Constants.AUTO_SCALING_INTERVAL, CloudSimSCTags.AUTO_SCALE);
     }
 
     @Override

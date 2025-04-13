@@ -1,4 +1,4 @@
-package org.cloudbus.cloudsim.serverless.components.scheduling;
+package org.cloudbus.cloudsim.serverless.components;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -11,13 +11,9 @@ import org.cloudbus.cloudsim.container.lists.ContainerList;
 import org.cloudbus.cloudsim.container.lists.ContainerVmList;
 import org.cloudbus.cloudsim.core.CloudSim;
 import org.cloudbus.cloudsim.core.SimEvent;
-import org.cloudbus.cloudsim.serverless.components.loadbalancer.RequestLoadBalancer;
-import org.cloudbus.cloudsim.serverless.components.process.ServerlessDatacenter;
-import org.cloudbus.cloudsim.serverless.components.process.ServerlessInvoker;
-import org.cloudbus.cloudsim.serverless.components.transfer.ServerlessRequest;
-import org.cloudbus.cloudsim.serverless.components.process.ServerlessContainer;
+import org.cloudbus.cloudsim.serverless.components.loadbalance.RequestLoadBalancer;
 import org.cloudbus.cloudsim.serverless.utils.CloudSimSCTags;
-import org.cloudbus.cloudsim.serverlessbac.Constants;
+import org.cloudbus.cloudsim.serverless.utils.Constants;
 import org.cloudbus.cloudsim.util.MathUtil;
 
 import java.util.*;
@@ -55,7 +51,7 @@ public class ServerlessController extends ContainerDatacenterBroker {
     public Queue<ServerlessRequest> requestQueue = new LinkedList<>();
 
     protected double requestSubmitClock = 0;
-    private int containersMadeCounter = 1; // Used as id
+    private int containersMadeCounter = 0; // Used as id
 
     public int tasksReturnedCount = 0;
 
@@ -115,7 +111,7 @@ public class ServerlessController extends ContainerDatacenterBroker {
             send(
                     getId(),
                     Constants.MINIMUM_INTERVAL_BETWEEN_TWO_CLOUDLET_SUBMISSIONS,
-                    CloudSimSCTags.CLOUDLET_SUBMIT_ACK,
+                    CloudSimSCTags.CLOUDLET_SUBMIT,
                     request
             );
         } else {
@@ -128,6 +124,7 @@ public class ServerlessController extends ContainerDatacenterBroker {
 
     @Override
     public void processContainerCreate(SimEvent ev) {
+
         int[] data = (int[]) ev.getData();
         int invokerId = data[0];
         int containerId = data[1];
@@ -379,6 +376,11 @@ public class ServerlessController extends ContainerDatacenterBroker {
                         Constants.SCHEDULING_INTERVAL
                 );
         getContainerList().add(container);
+
+        if (request != null) {
+            request.setContainerId(containersMadeCounter);
+        }
+        submitContainer(request, container);
     }
 
     public void addToFunctionInvokersMap(ServerlessInvoker invoker, String functionId) {

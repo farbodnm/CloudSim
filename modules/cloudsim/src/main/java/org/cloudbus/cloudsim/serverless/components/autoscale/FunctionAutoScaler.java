@@ -1,12 +1,8 @@
-package org.cloudbus.cloudsim.serverless.components.scaling;
+package org.cloudbus.cloudsim.serverless.components.autoscale;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.cloudbus.cloudsim.serverless.components.process.ServerlessContainer;
-import org.cloudbus.cloudsim.serverless.components.process.ServerlessDatacenter;
-
-import java.util.List;
-import java.util.Map;
+import org.cloudbus.cloudsim.serverless.components.ServerlessDatacenter;
 
 @Setter
 @Getter
@@ -23,6 +19,8 @@ public abstract class FunctionAutoScaler {
 
     private ServerlessDatacenter datacenter;
     private int userId;
+
+    public FunctionAutoScaler() {}
 
     public FunctionAutoScaler(ServerlessDatacenter datacenter) {
         this.datacenter = datacenter;

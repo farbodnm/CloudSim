@@ -1,12 +1,12 @@
-package org.cloudbus.cloudsim.serverless.components.scheduling;
+package org.cloudbus.cloudsim.serverless.components.schedule;
 
 import lombok.extern.slf4j.Slf4j;
 import org.cloudbus.cloudsim.container.core.Container;
 import org.cloudbus.cloudsim.container.core.ContainerVm;
 import org.cloudbus.cloudsim.container.lists.ContainerVmList;
 import org.cloudbus.cloudsim.core.CloudSim;
-import org.cloudbus.cloudsim.serverless.components.process.ServerlessContainer;
-import org.cloudbus.cloudsim.serverless.components.process.ServerlessInvoker;
+import org.cloudbus.cloudsim.serverless.components.ServerlessContainer;
+import org.cloudbus.cloudsim.serverless.components.ServerlessInvoker;
 import org.cloudbus.cloudsim.serverless.utils.Constants;
 
 import java.util.Random;
@@ -30,7 +30,7 @@ public class DefaultFunctionScheduler extends FunctionScheduler {
                 for (int i = selectedInvokerIndex; i <= getContainerVmList().size(); i++) {
                     ServerlessInvoker tempSelectedInvoker = ContainerVmList.getById(getContainerVmList(), i);
                     assert tempSelectedInvoker != null;
-                    if (tempSelectedInvoker.isSuitableForContainer((ServerlessContainer) container)) {
+                    if (tempSelectedInvoker.isSuitableForContainer((ServerlessContainer) container, tempSelectedInvoker)) {
                         selectedInvoker = tempSelectedInvoker;
                         isInvokerSelected = true;
                         break;
@@ -41,7 +41,7 @@ public class DefaultFunctionScheduler extends FunctionScheduler {
                     for (int i = 1; i < selectedInvokerIndex; i++) {
                         ServerlessInvoker tempSelectedInvoker = ContainerVmList.getById(getContainerVmList(), i);
                         assert tempSelectedInvoker != null;
-                        if (tempSelectedInvoker.isSuitableForContainer((ServerlessContainer) container)) {
+                        if (tempSelectedInvoker.isSuitableForContainer((ServerlessContainer) container, tempSelectedInvoker)) {
                             selectedInvoker = tempSelectedInvoker;
                             break;
                         }
@@ -63,7 +63,7 @@ public class DefaultFunctionScheduler extends FunctionScheduler {
                     int index = random.nextInt(getContainerVmList().size() - 1);
                     ServerlessInvoker tempSelectedInvoker = ContainerVmList.getById(getContainerVmList(), index);
                     assert tempSelectedInvoker != null;
-                    if (tempSelectedInvoker.isSuitableForContainer((ServerlessContainer) container)) {
+                    if (tempSelectedInvoker.isSuitableForContainer((ServerlessContainer) container, tempSelectedInvoker)) {
                         selectedInvoker = tempSelectedInvoker;
                         break;
                     }
@@ -75,7 +75,7 @@ public class DefaultFunctionScheduler extends FunctionScheduler {
                 for (int i = 1; i <= getContainerVmList().size(); i++) {
                     ServerlessInvoker tempSelectedInvoker = ContainerVmList.getById(getContainerVmList(), i);
                     assert tempSelectedInvoker != null;
-                    if (tempSelectedInvoker.isSuitableForContainer((ServerlessContainer) container)) {
+                    if (tempSelectedInvoker.isSuitableForContainer((ServerlessContainer) container, tempSelectedInvoker)) {
                         selectedInvoker = tempSelectedInvoker;
                         break;
                     }
@@ -89,7 +89,7 @@ public class DefaultFunctionScheduler extends FunctionScheduler {
                     ServerlessInvoker tempSelectedInvoker = ContainerVmList.getById(getContainerVmList(), i);
                     assert tempSelectedInvoker != null;
                     double invokerCpuAvailability = tempSelectedInvoker.getAvailableMips() / tempSelectedInvoker.getTotalMips();
-                    if (tempSelectedInvoker.isSuitableForContainer((ServerlessContainer) container)) {
+                    if (tempSelectedInvoker.isSuitableForContainer((ServerlessContainer) container, tempSelectedInvoker)) {
                         if (invokerCpuAvailability < minRemainingCap) {
                             minRemainingCap = invokerCpuAvailability;
                             selectedInvoker = tempSelectedInvoker;

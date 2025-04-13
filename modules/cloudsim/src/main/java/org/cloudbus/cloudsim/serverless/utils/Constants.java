@@ -122,7 +122,7 @@ public class Constants {
      * Name of the file containing function requests list.
      */
 
-    public static final String FUNCTION_REQUESTS_FILENAME = "modules/cloudsim/src/main/java/org/cloudbus/cloudsim/serverless/Real_trace_test2_small.csv";
+    public static final String FUNCTION_REQUESTS_FILENAME = "/home/farbod/Projects/CloudSim/modules/cloudsim/src/main/java/org/cloudbus/cloudsim/serverless/simulations/Real_trace_test2_small.csv";
 
     /**
      * Algorithm specific parameters

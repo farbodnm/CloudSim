@@ -1,11 +1,10 @@
-package org.cloudbus.cloudsim.serverless.components.transfer;
+package org.cloudbus.cloudsim.serverless.components;
 
 import lombok.Getter;
 import lombok.Setter;
 import org.cloudbus.cloudsim.UtilizationModel;
 import org.cloudbus.cloudsim.container.core.ContainerCloudlet;
 import org.cloudbus.cloudsim.core.CloudSim;
-import org.cloudbus.cloudsim.serverless.components.provision.UtilizationModelPartial;
 
 import java.util.ArrayList;
 import java.util.List;
