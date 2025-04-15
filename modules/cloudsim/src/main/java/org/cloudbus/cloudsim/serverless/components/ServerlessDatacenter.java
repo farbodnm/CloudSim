@@ -110,7 +110,7 @@ public class ServerlessDatacenter extends PowerContainerDatacenterCM {
         // if some time passed since last processing
         // R: for term is to allow loop at simulation start. Otherwise, one initial
         // simulation step is skipped and schedulers are not properly initialized
-        if (CloudSim.clock() < 0.111 || CloudSim.clock() > getLastProcessTime() + CloudSim.getMinTimeBetweenEvents()) {
+        if (CloudSim.clock() < 0.111 || CloudSim.clock() > getLastProcessTime() + CloudSim.getMinTimeBetweenEvents() / 1000) {
             List<? extends ContainerHost> list = getVmAllocationPolicy().getContainerHostList();
             double smallerTime = Double.MAX_VALUE;
             for (ContainerHost host : list) {
@@ -337,7 +337,6 @@ public class ServerlessDatacenter extends PowerContainerDatacenterCM {
                         vm.setStatus(InvokerStatus.ON);
                         vm.offTime += (CloudSim.clock() - vm.getRecordTime());
                         vm.setRecordTime(CloudSim.clock());
-
                     }
                 }
                 if (vm.getId() == -1) {

@@ -5,6 +5,7 @@ import org.cloudbus.cloudsim.container.core.Container;
 import org.cloudbus.cloudsim.container.core.ContainerVm;
 import org.cloudbus.cloudsim.container.lists.ContainerVmList;
 import org.cloudbus.cloudsim.core.CloudSim;
+import org.cloudbus.cloudsim.serverless.components.ServerlessController;
 import org.cloudbus.cloudsim.serverless.components.ServerlessDatacenter;
 import org.cloudbus.cloudsim.serverless.components.ServerlessInvoker;
 import org.cloudbus.cloudsim.serverless.utils.Constants;
@@ -17,24 +18,8 @@ public class FunctionSchedulerConstBased extends FunctionScheduler {
   // Vm index for selecting Vm in round-robin fashion
   private int selectedVmIndex = 1;
 
-  @Override
-  public boolean allocateVmForContainer(Container container, ContainerVm containerVm, List<ContainerVm> containerVmList) {
-    setContainerVmList(containerVmList);
-
-    if (containerVm == null) {
-      log.error("{}: {}: No suitable invoker found for container: {}",
-          CloudSim.clock(), this.getClass().getSimpleName(), container.getId());
-      return false;
-    }
-    if (containerVm.containerCreate(container)) { // if vm has been successfully created in the host
-      getContainerTable().put(container.getUid(), containerVm);
-      log.info("{}: {}: Container: {} has been allocated to invoker: :{}",
-          CloudSim.clock(), this.getClass().getSimpleName(), container.getId(), containerVm.getId());
-      return true;
-    }
-    log.error("{}: {}: Creation of container: {} on the invoker: {} failed unexpectedly",
-        CloudSim.clock(), this.getClass().getSimpleName(), container.getId(), containerVm.getId());
-    return false;
+  public FunctionSchedulerConstBased(ServerlessController controller) {
+    super(controller);
   }
 
   @Override
@@ -70,6 +55,8 @@ public class FunctionSchedulerConstBased extends FunctionScheduler {
             selectedVmIndex = 1;
           } else
             selectedVmIndex++;
+          if (selectedVm == null)
+            super.controller.resubmitContainerWithDelay(container);
           break;
         }
 

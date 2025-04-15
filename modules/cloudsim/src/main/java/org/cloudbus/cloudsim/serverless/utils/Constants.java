@@ -115,13 +115,13 @@ public class Constants {
      */
 
     public static final int NUMBER_HOSTS = 5;
-    public static final int NUMBER_VMS = 15;
+    public static final int NUMBER_VMS = 50;
 
     /**
      * Name of the file containing function requests list.
      */
 
-    public static final String FUNCTION_REQUESTS_FILENAME = "/home/farbod/Downloads/CloudSimSC/modules/cloudsim/src/main/java/org/cloudbus/cloudsim/serverless/simulation/Real_trace_test2_more.csv";
+    public static final String FUNCTION_REQUESTS_FILENAME = "/home/farbod/Downloads/CloudSimSC/modules/cloudsim/src/main/java/org/cloudbus/cloudsim/serverless/simulation/Real_trace_test2.csv";
 
     /**
      * Algorithm specific parameters
@@ -143,7 +143,7 @@ public class Constants {
     public static final int MAX_REPLICAS = 50;
     public static final boolean CONTAINER_IDLING_ENABLED = false;
     public static final int CONTAINER_IDLING_TIME = 10;
-    public static final double SHORT_TERM_ALPHA = 1;
+    public static final double SHORT_TERM_ALPHA = 0.5;
     public static final double MEDIUM_TERM_ALPHA = 0.1;
     public static final double HABIT_VM_RANGE_EXPONENT = 1;
     public static final double DECAY_HALF_LIFE = 100;

@@ -57,6 +57,7 @@ public class ServerlessController extends ContainerDatacenterBroker {
      */
     protected Map<String, ArrayList<ServerlessInvoker>> functionVmMap = new HashMap<>();
 
+    @Getter
     protected List<ServerlessRequest> toSubmitOnContainerCreation = new ArrayList<>();
 
     protected List<Double> averageVmUsageRecords = new ArrayList<>();
@@ -122,8 +123,8 @@ public class ServerlessController extends ContainerDatacenterBroker {
     @Override
     public void startEntity() {
         super.startEntity();
-        while(!requestArrivalTime.isEmpty()){
-            send(getId(), requestArrivalTime.remove(), CloudSimTags.CLOUDLET_SUBMIT,requestQueue.remove());
+        while (!requestArrivalTime.isEmpty()) {
+            send(getId(), requestArrivalTime.remove(), CloudSimTags.CLOUDLET_SUBMIT, requestQueue.remove());
         }
     }
 
@@ -232,6 +233,8 @@ public class ServerlessController extends ContainerDatacenterBroker {
         removeFromVmTaskExecutionMap((ServerlessRequest) request, (ServerlessInvoker) vm);
         ServerlessRequestScheduler clScheduler = (ServerlessRequestScheduler) (container.getContainerCloudletScheduler());
         clScheduler.deAllocateResources((ServerlessRequest) request);
+        clScheduler.removeFromTotalCurrentAllocatedMipsShareForRequests((ServerlessRequest) request);
+        clScheduler.removeFromTotalCurrentAllocatedMipsShareForRequests((ServerlessRequest) request);
 
         getCloudletReceivedList().add(request);
         (((ServerlessContainer) Objects.requireNonNull(ContainerList.getById(getContainerList(), request.getContainerId())))
@@ -418,6 +421,10 @@ public class ServerlessController extends ContainerDatacenterBroker {
                 functionVmMap.get(functionId).add(vm);
             }
         }
+    }
+
+    public void resubmitContainerWithDelay(Container container) {
+        send(getDatacenterIdsList().get(0), 25, containerCloudSimTags.CONTAINER_SUBMIT, container);
     }
 
     /**

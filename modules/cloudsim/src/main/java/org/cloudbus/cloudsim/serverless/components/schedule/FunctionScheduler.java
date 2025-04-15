@@ -5,6 +5,7 @@ import org.cloudbus.cloudsim.container.core.Container;
 import org.cloudbus.cloudsim.container.core.ContainerVm;
 import org.cloudbus.cloudsim.container.resourceAllocators.PowerContainerAllocationPolicy;
 import org.cloudbus.cloudsim.core.CloudSim;
+import org.cloudbus.cloudsim.serverless.components.ServerlessController;
 import org.cloudbus.cloudsim.serverless.components.ServerlessDatacenter;
 import org.cloudbus.cloudsim.serverless.components.ServerlessInvoker;
 
@@ -22,8 +23,11 @@ import java.util.Map;
 @Slf4j
 public abstract class FunctionScheduler extends PowerContainerAllocationPolicy {
 
-    public FunctionScheduler() {
+    ServerlessController controller;
+
+    public FunctionScheduler(ServerlessController controller) {
         super();
+        this.controller = controller;
     }
 
     public abstract ContainerVm findVmForContainer(Container container);

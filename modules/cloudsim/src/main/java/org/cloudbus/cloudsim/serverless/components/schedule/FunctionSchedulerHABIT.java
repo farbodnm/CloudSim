@@ -6,22 +6,30 @@ import org.cloudbus.cloudsim.container.core.ContainerVm;
 import org.cloudbus.cloudsim.container.lists.ContainerVmList;
 import org.cloudbus.cloudsim.core.CloudSim;
 import org.cloudbus.cloudsim.serverless.components.ServerlessContainer;
+import org.cloudbus.cloudsim.serverless.components.ServerlessController;
 import org.cloudbus.cloudsim.serverless.components.ServerlessInvoker;
 import org.cloudbus.cloudsim.serverless.utils.Constants;
 import org.cloudbus.cloudsim.serverless.utils.IPair;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 @Slf4j
 public class FunctionSchedulerHABIT extends FunctionScheduler {
+
+    public FunctionSchedulerHABIT(ServerlessController controller) {
+        super(controller);
+    }
 
     @Override
     public ContainerVm findVmForContainer(Container container) {
 
         ServerlessInvoker selectedVm = null;
         try {
-            int selectedBaseVM = Integer.parseInt(((ServerlessContainer) container).getFunctionType()) % getContainerVmList().size();
+            int selectedBaseVM = (Integer.parseInt(((ServerlessContainer) container).getFunctionType()) + container.getUserId()) % getContainerVmList().size();
             ServerlessInvoker baseInvoker = Objects.requireNonNull(ContainerVmList.getById(getContainerVmList(), selectedBaseVM));
             ServerlessInvoker VM1 = baseInvoker;
             ServerlessInvoker VM2 = baseInvoker;
@@ -32,14 +40,14 @@ public class FunctionSchedulerHABIT extends FunctionScheduler {
                 Random rand = new Random();
                 int vm1ID = selectRange.left() + rand.nextInt(selectRange.right() - selectRange.left() + 1);
                 int vm2ID = selectRange.left() + rand.nextInt(selectRange.right() - selectRange.left() + 1);
-                while (vm2ID == vm1ID) {
+                while (vm2ID == vm1ID && !Objects.equals(selectRange.left(), selectRange.right())) {
                     vm2ID = selectRange.left() + rand.nextInt(selectRange.right() - selectRange.left() + 1);
                 }
-                if (vm1ID >= getContainerVmList().size() - 1) {
-                    vm1ID = vm1ID - getContainerVmList().size() + 1;
+                if (vm1ID > getContainerVmList().size()) {
+                    vm1ID = vm1ID - getContainerVmList().size();
                 }
-                if (vm2ID >= getContainerVmList().size() - 1) {
-                    vm2ID = vm2ID - getContainerVmList().size() + 1;
+                if (vm2ID > getContainerVmList().size()) {
+                    vm2ID = vm2ID - getContainerVmList().size();
                 }
                 VM1 = Objects.requireNonNull(ContainerVmList.getById(getContainerVmList(), vm1ID));
                 VM2 = Objects.requireNonNull(ContainerVmList.getById(getContainerVmList(), vm2ID));
@@ -51,7 +59,11 @@ public class FunctionSchedulerHABIT extends FunctionScheduler {
                 log.info("{}: {}: Container couldn't fit on any vm: {} so congestion updated to: {}",
                         CloudSim.clock(), this.getClass().getSimpleName(),
                         selectedBaseVM, baseInvoker.getCongestionFactor());
-                findVmForContainer(container);
+
+                selectedVm = selectInvokerFirstFit(selectedBaseVM, container);
+                if (selectedVm == null) {
+                    super.controller.resubmitContainerWithDelay(container);
+                }
             }
 
             log.info("{}: {}: Selected vm: {} for container: {} using {} algorithm. Congestion: {}",
@@ -73,7 +85,6 @@ public class FunctionSchedulerHABIT extends FunctionScheduler {
                 );
             } else {
                 e.printStackTrace();
-                findVmForContainer(container);
             }
         }
 
@@ -117,5 +128,22 @@ public class FunctionSchedulerHABIT extends FunctionScheduler {
         }
 
         return vm1;
+    }
+
+    private ServerlessInvoker selectInvokerFirstFit(int baseInvoker, Container container) {
+
+        for (int x = baseInvoker; x <= getContainerVmList().size(); x++) {
+            ServerlessInvoker tempSelectedVm = Objects.requireNonNull(ContainerVmList.getById(getContainerVmList(), x));
+            if (tempSelectedVm.isSuitableForContainer(container, tempSelectedVm)) {
+                return tempSelectedVm;
+            }
+        }
+        for (int x = 1; x < baseInvoker; x++) {
+            ServerlessInvoker tempSelectedVm = Objects.requireNonNull(ContainerVmList.getById(getContainerVmList(), x));
+            if (tempSelectedVm.isSuitableForContainer(container, tempSelectedVm)) {
+                return tempSelectedVm;
+            }
+        }
+        return null;
     }
 }

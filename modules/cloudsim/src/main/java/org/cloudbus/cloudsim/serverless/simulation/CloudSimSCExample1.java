@@ -134,7 +134,7 @@ public class CloudSimSCExample1 {
             createRequests();
 
 //          the time at which the simulation has to be terminated.
-            CloudSim.terminateSimulation(2500.00);
+            CloudSim.terminateSimulation(3000.00);
 
 //          Starting the simualtion
             CloudSim.startSimulation();
@@ -259,7 +259,7 @@ public class CloudSimSCExample1 {
                 PCVmAllocationPolicyMigrationAbstractHostSelection(hostList, vmSelectionPolicy,
                 hostSelectionPolicy, Constants.OVER_UTILIZATION_THRESHOLD, Constants.UNDER_UTILIZATION_THRESHOLD);
         //      Allocating vms to container
-        FunctionScheduler containerAllocationPolicy = FunctionSchedulerProvider.getScheduler();
+        FunctionScheduler containerAllocationPolicy = FunctionSchedulerProvider.getScheduler(controller);
 
         ContainerDatacenterCharacteristics characteristics = new
                 ContainerDatacenterCharacteristics(arch, os, vmm, hostList, time_zone, cost, costPerMem, costPerStorage,
@@ -420,7 +420,7 @@ public class CloudSimSCExample1 {
         System.out.println("Average CPU utilization of vms: "+ controller.getAverageResourceUtilization());
         System.out.println("Average vm count: "+ controller.getAverageVmCount());
         System.out.println("Using exsiting cont: "+ controller.existingContainerCount);
-
+        System.out.println("What happened? "+ controller.getToSubmitOnContainerCreation());
     }
 
     private static void writeDataLineByLine(List<ContainerCloudlet> list) throws ParameterException {
@@ -480,7 +480,7 @@ public class CloudSimSCExample1 {
             writer.writeNext(data2);
             String[] data3 = {"Successful Request Count # ", String.valueOf(successfulRequestCount)};
             writer.writeNext(data3);
-            String[] data4 = {"Dropped Request Count # ", String.valueOf(droppedRequestCount)};
+            String[] data4 = {"Dropped Request Count # ", String.valueOf(droppedRequestCount + controller.getToSubmitOnContainerCreation().size())};
             writer.writeNext(data4);
             String[] data5 = {"Total request response time # ", String.valueOf(totalResponseTime)};
             writer.writeNext(data5);

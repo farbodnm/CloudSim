@@ -64,8 +64,16 @@ public class ServerlessRequestScheduler extends ContainerCloudletSchedulerDynami
         totalCurrentAllocatedMipsShareForRequests += cl.getUtilizationOfCpu();
     }
 
+    public void removeFromTotalCurrentAllocatedMipsShareForRequests(ServerlessRequest cl) {
+        totalCurrentAllocatedMipsShareForRequests -= cl.getUtilizationOfCpu();
+    }
+
     public void addToTotalCurrentAllocatedRamForRequests(ServerlessRequest cl) {
         totalCurrentAllocatedRamForRequests += cl.getContainerMemory() * cl.getUtilizationOfRam();
+    }
+
+    public void removeFromTotalCurrentAllocatedRamForRequests(ServerlessRequest cl) {
+        totalCurrentAllocatedRamForRequests -= cl.getContainerMemory() * cl.getUtilizationOfRam();
     }
 
     public boolean isSuitableForRequest(ServerlessRequest cl, ServerlessContainer cont) {
